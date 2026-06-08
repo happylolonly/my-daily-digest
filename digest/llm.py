@@ -2,11 +2,16 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 
-from google.generativeai import GenerativeModel
-from google.generativeai import configure as genai_configure
+from google import genai
+from google.genai import errors as genai_errors
 
 from digest.report import ensure_html_safe
+
+GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_RETRY_ATTEMPTS = 3
+GEMINI_RETRY_DELAY_S = 15
 
 
 def build_gemini_prompt(
@@ -42,29 +47,62 @@ def build_gemini_prompt(
     )
 
 
+def _is_retryable_error(exc: Exception) -> bool:
+    if isinstance(exc, genai_errors.ClientError) and exc.code == 429:
+        return True
+    return isinstance(exc, genai_errors.ServerError) and exc.code == 503
+
+
 def generate_report_html_with_gemini(
-    gemini_api_key: str,
-    gemini_model: str,
     report_date: str,
     weather_text: str | None,
     prices_text: str | None,
     forex_text: str | None,
     news_text: str | None,
 ) -> str | None:
-    try:
-        genai_configure(api_key=gemini_api_key)
-        model = GenerativeModel(gemini_model)
-        prompt = build_gemini_prompt(
-            report_date=report_date,
-            weather_text=weather_text,
-            prices_text=prices_text,
-            forex_text=forex_text,
-            news_text=news_text,
-        )
+    """
+    Uses google.genai.Client() which reads GEMINI_API_KEY (or GOOGLE_API_KEY) from env.
+    Call only after load_local_env() / GitHub Actions env is set.
+    """
+    prompt = build_gemini_prompt(
+        report_date=report_date,
+        weather_text=weather_text,
+        prices_text=prices_text,
+        forex_text=forex_text,
+        news_text=news_text,
+    )
 
-        resp = model.generate_content(prompt)
-        raw_text = getattr(resp, "text", None) or str(resp)
-        return ensure_html_safe(str(raw_text).strip())
+    try:
+        client = genai.Client()
+
+        for attempt in range(1, GEMINI_RETRY_ATTEMPTS + 1):
+            try:
+                response = client.models.generate_content(
+                    model=GEMINI_MODEL,
+                    contents=prompt,
+                )
+                raw_text = (response.text or "").strip()
+                if raw_text:
+                    return ensure_html_safe(raw_text)
+                logging.warning(
+                    "Gemini model %s returned empty text (attempt %s/%s)",
+                    GEMINI_MODEL,
+                    attempt,
+                    GEMINI_RETRY_ATTEMPTS,
+                )
+            except (genai_errors.ClientError, genai_errors.ServerError) as exc:
+                if not _is_retryable_error(exc) or attempt >= GEMINI_RETRY_ATTEMPTS:
+                    raise
+                logging.warning(
+                    "Gemini error %s, retry in %ss (%s/%s)",
+                    exc.code,
+                    GEMINI_RETRY_DELAY_S,
+                    attempt,
+                    GEMINI_RETRY_ATTEMPTS,
+                )
+                time.sleep(GEMINI_RETRY_DELAY_S)
+
+        return None
     except Exception:
-        logging.exception("Gemini generation failed")
+        logging.exception("Gemini generation failed (model=%s)", GEMINI_MODEL)
         return None

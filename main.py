@@ -19,8 +19,7 @@ def main() -> None:
     if not telegram_bot_token or not telegram_chat_id:
         raise RuntimeError("TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are required.")
 
-    gemini_api_key = os.environ.get("GEMINI_API_KEY", "").strip()
-    gemini_model = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash").strip()
+    gemini_enabled = bool(os.environ.get("GEMINI_API_KEY", "").strip())
 
     now = datetime.now(DA_NANG_TZ)
     report_date = now.strftime("%Y-%m-%d")
@@ -36,10 +35,8 @@ def main() -> None:
     )
 
     final_html = None
-    if gemini_api_key:
+    if gemini_enabled:
         final_html = generate_report_html_with_gemini(
-            gemini_api_key=gemini_api_key,
-            gemini_model=gemini_model,
             report_date=report_date,
             weather_text=data.weather,
             prices_text=data.prices,
