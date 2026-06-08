@@ -29,6 +29,42 @@ def ensure_html_safe(text: str) -> str:
     return escaped
 
 
+def _safe_or_unavailable(text: str | None) -> str:
+    return text if text else "данные недоступны"
+
+
+def build_weather_html(report_date: str, weather_text: str | None) -> str:
+    parts = [
+        f"<b>🌤 Погода — Da Nang</b> ({html.escape(report_date)})",
+        "",
+        html.escape(_safe_or_unavailable(weather_text)),
+    ]
+    return ensure_html_safe("\n".join(parts).strip())
+
+
+def build_rates_html(
+    report_date: str,
+    prices_text: str | None,
+    forex_text: str | None,
+) -> str:
+    parts = [
+        f"<b>💰 Курсы</b> ({html.escape(report_date)})",
+        "",
+        html.escape(_safe_or_unavailable(prices_text)),
+        html.escape(f"VND/USD: {_safe_or_unavailable(forex_text)}"),
+    ]
+    return ensure_html_safe("\n".join(parts).strip())
+
+
+def build_news_html(report_date: str, news_text: str | None) -> str:
+    parts = [
+        f"<b>📰 Новости</b> ({html.escape(report_date)})",
+        "",
+        html.escape(_safe_or_unavailable(news_text)),
+    ]
+    return ensure_html_safe("\n".join(parts).strip())
+
+
 def build_plain_text_report_html(
     report_date: str,
     weather_text: str | None,
@@ -36,20 +72,17 @@ def build_plain_text_report_html(
     forex_text: str | None,
     news_text: str | None,
 ) -> str:
-    def safe_or_unavailable(s: str | None) -> str:
-        return s if s else "данные недоступны"
-
     parts: list[str] = []
     parts.append(f"<b>📅 {html.escape(report_date)}</b>")
     parts.append("")
     parts.append("<b>🌤 Погода — Da Nang</b>")
-    parts.append(html.escape(safe_or_unavailable(weather_text)))
+    parts.append(html.escape(_safe_or_unavailable(weather_text)))
     parts.append("")
     parts.append("<b>💰 Курсы</b>")
-    parts.append(html.escape(safe_or_unavailable(prices_text)))
-    parts.append(html.escape(f"VND/USD: {safe_or_unavailable(forex_text)}"))
+    parts.append(html.escape(_safe_or_unavailable(prices_text)))
+    parts.append(html.escape(f"VND/USD: {_safe_or_unavailable(forex_text)}"))
     parts.append("")
     parts.append("<b>📰 Новости</b>")
-    parts.append(html.escape(safe_or_unavailable(news_text)))
+    parts.append(html.escape(_safe_or_unavailable(news_text)))
 
     return ensure_html_safe("\n".join(parts).strip())
