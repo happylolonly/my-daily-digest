@@ -1,0 +1,30 @@
+{
+  "name": "Daily Digest Bot",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "containerEnv": {
+    "TZ": "Asia/Ho_Chi_Minh"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.debugpy",
+        "ms-python.black-formatter"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.analysis.typeCheckingMode": "basic",
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter",
+          "editor.formatOnSave": true
+        }
+      }
+    }
+  },
+  "postCreateCommand": "bash -c 'if [ -f requirements.txt ]; then pip install --user -r requirements.txt; fi'",
+  "remoteUser": "vscode"
+}
