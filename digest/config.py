@@ -2,17 +2,53 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from zoneinfo import ZoneInfo
 
 HTTP_TIMEOUT_S = 10
 DA_NANG_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
 
+_TELEGRAM_BOT_URL = re.compile(
+    r"(https://api\.telegram\.org/bot)[^/\s\"']+",
+    re.IGNORECASE,
+)
+
+
+class RedactSecretsFilter(logging.Filter):
+    """Masks secrets in log output while keeping INFO level for the app."""
+
+    def __init__(self, secrets: tuple[str, ...] = ()) -> None:
+        super().__init__()
+        self._secrets = tuple(s for s in secrets if len(s) >= 8)
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if record.args:
+            try:
+                message = record.msg % record.args
+            except Exception:
+                message = str(record.msg)
+            record.msg = self._redact(message)
+            record.args = None
+        elif isinstance(record.msg, str):
+            record.msg = self._redact(record.msg)
+        return True
+
+    def _redact(self, text: str) -> str:
+        text = _TELEGRAM_BOT_URL.sub(r"\1***", text)
+        for secret in sorted(self._secrets, key=len, reverse=True):
+            text = text.replace(secret, "***")
+        return text
+
 
 def setup_logging() -> None:
+    secrets = (os.environ.get("TELEGRAM_BOT_TOKEN", "").strip(),)
     logging.basicConfig(
         level=os.environ.get("LOG_LEVEL", "INFO"),
         format="%(asctime)s %(levelname)s %(message)s",
     )
+    secret_filter = RedactSecretsFilter(secrets)
+    for handler in logging.root.handlers:
+        handler.addFilter(secret_filter)
 
 
 def load_local_env() -> None:

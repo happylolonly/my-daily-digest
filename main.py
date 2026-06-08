@@ -8,8 +8,8 @@ from digest.telegram.delivery import send_telegram_message
 
 
 def main() -> None:
-    setup_logging()
     load_local_env()
+    setup_logging()
 
     telegram_bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     telegram_chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()

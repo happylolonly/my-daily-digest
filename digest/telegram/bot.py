@@ -9,8 +9,8 @@ from digest.telegram.webhook import resolve_webhook_config
 
 
 def run_bot() -> None:
-    setup_logging()
     load_local_env()
+    setup_logging()
 
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     user_id = authorized_user_id()
