@@ -10,22 +10,47 @@
 - Курсы: BTC, ETH, VND/USD
 - Новости за 24ч: AI, крипта, геополитика
 
-**Стек:** Python 3.11+, GitHub Actions, Gemini 2.0 Flash, Telegram Bot API, OpenWeatherMap, CoinGecko, RSS.
+**Стек:** Python 3.11+, GitHub Actions, Railway (webhook + Serverless), Gemini 2.5 Flash, Telegram Bot API, wttr.in, CoinGecko, RSS.
 
 **БД нет** — каждый запуск stateless.
 
-Подробнее: `doc.txt`.
+Подробнее: `doc.txt` (может отставать от кода).
 
 ## Структура
 
 ```
-main.py
+main.py                  # cron: утренний дайджест → Telegram
+bot.py                   # entry point → digest.telegram.bot.run_bot()
 digest/
+  config.py              # logging, timezone, load_local_env
+  content/               # дайджест: данные, HTML, LLM
+    service.py           # сборка HTML по секции
+    report.py            # plain HTML без LLM
+    llm.py               # Gemini
+    fetchers/            # wttr.in, CoinGecko, RSS, forex
+  telegram/              # бот: команды, webhook, доставка
+    bot.py               # webhook (prod) / polling (local)
+    runtime.py           # run_polling / run_webhook
+    webhook.py           # WebhookConfig, /health для Railway
+    app.py               # build_application()
+    handlers.py          # команды, авторизация по user id
+    delivery.py          # отправка сообщения (cron)
 requirements.txt
+railway.toml             # railpack builder, startCommand, healthcheck
+runtime.txt
 .github/workflows/daily.yml
 ```
 
-Точка входа — `main.py`; логика разнесена по пакету `digest/`. Не дробить дальше без явной причины.
+**Два режима работы**
+
+| Режим | Entry point | Где запускать |
+|-------|-------------|---------------|
+| Утренний дайджест по расписанию | `python main.py` | GitHub Actions |
+| Команды `/digest`, `/weather`, … | `python bot.py` | Railway (webhook) или локально (polling) |
+
+**Режим бота:** если задан `WEBHOOK_URL` или `RAILWAY_PUBLIC_DOMAIN` + `WEBHOOK_SECRET` → webhook; иначе polling.
+
+Логика — в `digest/content/` и `digest/telegram/`; корневые `main.py` / `bot.py` — тонкие entry points.
 
 ## Идиоматичный Python
 
@@ -49,20 +74,20 @@ requirements.txt
 
 ## Секреты
 
-GitHub Secrets (и `.env` локально):
+GitHub Secrets / Railway Variables / `.env` локально:
 
 - `TELEGRAM_BOT_TOKEN`
-- `TELEGRAM_CHAT_ID`
-- `OPENWEATHER_API_KEY`
+- `TELEGRAM_CHAT_ID` — куда слать cron-дайджест (`main.py`)
+- `TELEGRAM_USER_ID` — кто может вызывать команды бота (fallback: `TELEGRAM_CHAT_ID`)
 - `GEMINI_API_KEY`
+- `WEBHOOK_URL` + `WEBHOOK_SECRET` — Railway prod (webhook); локально не задавать
 
 Не коммитить секреты. Не добавлять `.env` в git.
 
 ## Workflow
 
-- Cron: `0 1 * * *` (UTC) = 8:00 Da Nang
-- Добавить `workflow_dispatch` для ручного теста
-- `pip install -r requirements.txt` → `python main.py`
+- **GitHub Actions:** cron `0 1 * * *` (UTC) = 8:00 Da Nang; `workflow_dispatch` для ручного теста; `python main.py`
+- **Railway:** `python bot.py` в webhook-режиме; включить **Serverless** в UI; `GET /health` на том же `PORT`
 
 ## Рефакторинг и улучшения
 
@@ -94,7 +119,7 @@ GitHub Secrets (и `.env` локально):
 
 ## Чего не делать
 
-- БД, Redis, очереди, веб-сервер
+- БД, Redis, очереди, полноценный веб-сервер/API (кроме минимального `/health` для Railway)
 - NewsAPI и платные API без явного запроса
 - Over-engineering: фабрики, DI-контейнеры, абстрактные базовые классы для fetchers
 - Тесты и доки сверх запроса пользователя

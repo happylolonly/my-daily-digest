@@ -3,8 +3,8 @@ from __future__ import annotations
 import os
 
 from digest.config import load_local_env, setup_logging
-from digest.service import DigestSection, build_digest_html
-from digest.telegram import send_telegram_message
+from digest.content.service import DigestSection, build_digest_html
+from digest.telegram.delivery import send_telegram_message
 
 
 def main() -> None:

@@ -5,15 +5,15 @@ from datetime import datetime
 from enum import Enum
 
 from digest.config import DA_NANG_TZ
-from digest.fetchers import (
+from digest.content.fetchers import (
     fetch_all,
     fetch_crypto_prices_usd,
     fetch_forex_vnd_per_usd,
     fetch_news_last_24h,
     fetch_weather,
 )
-from digest.llm import generate_report_html_with_gemini
-from digest.report import (
+from digest.content.llm import generate_report_html_with_gemini
+from digest.content.report import (
     build_news_html,
     build_plain_text_report_html,
     build_rates_html,

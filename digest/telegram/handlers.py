@@ -8,7 +8,7 @@ from telegram import BotCommand, Update
 from telegram.constants import ParseMode
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
-from digest.service import DigestSection, build_digest_html
+from digest.content.service import DigestSection, build_digest_html
 
 HELP_TEXT = (
     "<b>Daily Digest Bot</b>\n\n"

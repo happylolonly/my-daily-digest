@@ -7,7 +7,7 @@ import time
 from google import genai
 from google.genai import errors as genai_errors
 
-from digest.report import ensure_html_safe
+from digest.content.report import ensure_html_safe
 
 GEMINI_MODEL = "gemini-2.5-flash"
 GEMINI_RETRY_ATTEMPTS = 3

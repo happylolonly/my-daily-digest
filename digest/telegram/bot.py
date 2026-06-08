@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import logging
 import os
 
 from digest.config import load_local_env, setup_logging
-from digest.handlers import authorized_user_id
-from digest.runtime import run_polling, run_webhook
-from digest.webhook import resolve_webhook_config
+from digest.telegram.handlers import authorized_user_id
+from digest.telegram.runtime import run_polling, run_webhook
+from digest.telegram.webhook import resolve_webhook_config
 
 
 def run_bot() -> None:

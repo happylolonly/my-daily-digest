@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import logging
 
-from digest.app import build_application
-from digest.handlers import authorized_user_id
-from digest.webhook import WebhookConfig, install_health_routes
+from digest.telegram.app import build_application
+from digest.telegram.handlers import authorized_user_id
+from digest.telegram.webhook import WebhookConfig, install_health_routes
 
 
 def run_polling(token: str, user_id: str) -> None:

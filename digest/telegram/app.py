@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from telegram.ext import Application
 
-from digest.handlers import post_init, register_handlers
+from digest.telegram.handlers import post_init, register_handlers
 
 
 def build_application(token: str) -> Application:

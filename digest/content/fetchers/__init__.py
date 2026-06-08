@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from digest.fetchers.crypto import fetch_crypto_prices_usd
-from digest.fetchers.forex import fetch_forex_vnd_per_usd
-from digest.fetchers.news import fetch_news_last_24h
-from digest.fetchers.weather import fetch_weather
+from digest.content.fetchers.crypto import fetch_crypto_prices_usd
+from digest.content.fetchers.forex import fetch_forex_vnd_per_usd
+from digest.content.fetchers.news import fetch_news_last_24h
+from digest.content.fetchers.weather import fetch_weather
 
 
 @dataclass
