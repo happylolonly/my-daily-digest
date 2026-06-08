@@ -56,25 +56,34 @@ class WebhookConfig:
     secret_token: str
 
 
+def is_railway_runtime() -> bool:
+    return bool(os.environ.get("RAILWAY_PROJECT_ID", "").strip())
+
+
 def resolve_webhook_config() -> WebhookConfig | None:
     """
-    Webhook mode when WEBHOOK_URL or RAILWAY_PUBLIC_DOMAIN is set.
-    Local dev without these vars uses polling.
+    Webhook on Railway (always). Polling locally when webhook env is absent.
     """
     explicit_url = os.environ.get("WEBHOOK_URL", "").strip().rstrip("/")
     railway_domain = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "").strip()
+    on_railway = is_railway_runtime()
 
     if explicit_url:
         public_base = explicit_url
     elif railway_domain:
         public_base = f"https://{railway_domain}"
+    elif on_railway:
+        raise RuntimeError(
+            "Railway requires webhook mode: generate a public domain "
+            "(Networking → Generate Domain) or set WEBHOOK_URL."
+        )
     else:
         return None
 
     secret = os.environ.get("WEBHOOK_SECRET", "").strip()
     if not secret:
         raise RuntimeError(
-            "WEBHOOK_SECRET is required when WEBHOOK_URL or RAILWAY_PUBLIC_DOMAIN is set."
+            "WEBHOOK_SECRET is required for webhook mode (set it in Railway Variables)."
         )
 
     port_str = os.environ.get("PORT", "").strip()
