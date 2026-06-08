@@ -44,7 +44,11 @@ class WebhookAppWithHealth(ptb_webhook.WebhookAppClass):
 
 
 def install_health_routes() -> None:
+    """PTB's updater imports WebhookAppClass by value — patch both modules."""
     ptb_webhook.WebhookAppClass = WebhookAppWithHealth
+    import telegram.ext._updater as ptb_updater
+
+    ptb_updater.WebhookAppClass = WebhookAppWithHealth
 
 
 @dataclasses.dataclass(frozen=True)
