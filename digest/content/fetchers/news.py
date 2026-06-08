@@ -11,15 +11,23 @@ import requests
 
 from digest.config import DA_NANG_TZ, HTTP_TIMEOUT_S
 
-MAX_ARTICLES_PER_TOPIC = 5
+MAX_ARTICLES_PER_TOPIC = 3
 NEWS_LOOKBACK_HOURS = 24
 USER_AGENT = "DailyDigestBot/1.0 (+https://github.com/)"
 
-# Reuters RSS is no longer available; BBC World is a stable geopolitics substitute.
+SKIP_TITLE_PATTERNS = ("how to", "review", "best ", "opinion", "podcast", "quiz", "sponsored")
+
+BOOST_BY_TOPIC: dict[str, tuple[str, ...]] = {
+    "AI": ("openai", "google", "anthropic", "regulation", "lawsuit", "nvidia", "meta"),
+    "Крипта": ("sec", "etf", "hack", "billion", "ban", "bitcoin", "ethereum"),
+    "Геополитика": ("war", "sanctions", "election", "nuclear", "ceasefire", "summit", "attack"),
+}
+
+# Reuters RSS is no longer available; BBC top stories for curated geopolitics headlines.
 FEEDS: dict[str, str] = {
     "AI": "https://techcrunch.com/category/artificial-intelligence/feed/",
     "Крипта": "https://www.coindesk.com/arc/outboundfeeds/rss/",
-    "Геополитика": "http://feeds.bbci.co.uk/news/world/rss.xml",
+    "Геополитика": "http://feeds.bbci.co.uk/news/rss.xml",
 }
 
 
@@ -83,18 +91,49 @@ def _dedupe_items(items: list[NewsItem]) -> list[NewsItem]:
     return unique
 
 
-def _select_recent_items(items: list[NewsItem], cutoff_utc: datetime) -> list[NewsItem]:
+def _should_skip_title(title: str) -> bool:
+    lowered = title.lower()
+    return any(pattern in lowered for pattern in SKIP_TITLE_PATTERNS)
+
+
+def _score_item(label: str, title: str, feed_index: int) -> int:
+    lowered = title.lower()
+    score = max(0, 10 - feed_index)
+    score += sum(2 for keyword in BOOST_BY_TOPIC.get(label, ()) if keyword in lowered)
+    return score
+
+
+def _select_recent_items(
+    items: list[NewsItem],
+    label: str,
+    cutoff_utc: datetime,
+) -> list[NewsItem]:
     items = _dedupe_items(items)
-    recent = [
+
+    dated_recent = [
         item
         for item in items
         if item.published is not None and item.published >= cutoff_utc
     ]
-    if recent:
-        recent.sort(key=lambda item: item.published or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
-        return recent[:MAX_ARTICLES_PER_TOPIC]
+    candidates = dated_recent if dated_recent else items
 
-    return items[:MAX_ARTICLES_PER_TOPIC]
+    scored: list[tuple[int, int, NewsItem]] = []
+    for index, item in enumerate(candidates):
+        if _should_skip_title(item.title):
+            continue
+        scored.append((_score_item(label, item.title, index), index, item))
+
+    scored.sort(key=lambda row: (-row[0], row[1]))
+    selected = [item for _, _, item in scored[:MAX_ARTICLES_PER_TOPIC]]
+
+    if not selected:
+        selected = [
+            item for item in candidates if not _should_skip_title(item.title)
+        ][:MAX_ARTICLES_PER_TOPIC]
+    if not selected:
+        selected = candidates[:MAX_ARTICLES_PER_TOPIC]
+
+    return selected
 
 
 def _format_topic(label: str, items: list[NewsItem]) -> str:
@@ -110,7 +149,7 @@ def _format_topic(label: str, items: list[NewsItem]) -> str:
 def _fetch_topic(label: str, url: str, cutoff_utc: datetime) -> str | None:
     try:
         items = _fetch_feed_entries(url)
-        selected = _select_recent_items(items, cutoff_utc)
+        selected = _select_recent_items(items, label, cutoff_utc)
         if not selected:
             return None
         return _format_topic(label, selected)
