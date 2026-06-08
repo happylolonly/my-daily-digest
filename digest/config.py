@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import sys
 from zoneinfo import ZoneInfo
 
 HTTP_TIMEOUT_S = 10
@@ -45,6 +46,7 @@ def setup_logging() -> None:
     logging.basicConfig(
         level=os.environ.get("LOG_LEVEL", "INFO"),
         format="%(asctime)s %(levelname)s %(message)s",
+        stream=sys.stdout,
     )
     secret_filter = RedactSecretsFilter(secrets)
     for handler in logging.root.handlers:
