@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from datetime import datetime
 from enum import Enum
@@ -55,6 +56,15 @@ def build_digest_html(section: DigestSection, *, use_gemini: bool = False) -> st
             )
             if final_html:
                 return final_html + format_motivation_html()
+            logging.warning(
+                "Using plain-text report fallback for %s (Gemini unavailable)",
+                report_date,
+            )
+        elif use_gemini:
+            logging.warning(
+                "Using plain-text report fallback for %s (GEMINI_API_KEY not set)",
+                report_date,
+            )
         return plain_fallback
 
     if section == DigestSection.WEATHER:
