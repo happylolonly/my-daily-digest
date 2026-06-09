@@ -9,28 +9,19 @@ on:
   workflow_dispatch:
 
 jobs:
-  send:
+  trigger:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Run daily digest
+      - name: Trigger digest on Railway
         env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
-          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
-        run: python main.py
-
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          RAILWAY_PUBLIC_DOMAIN: ${{ secrets.RAILWAY_PUBLIC_DOMAIN }}
+        run: |
+          if [[ -z "$CRON_SECRET" || -z "$RAILWAY_PUBLIC_DOMAIN" ]]; then
+            echo "CRON_SECRET and RAILWAY_PUBLIC_DOMAIN must be set in repository secrets."
+            exit 1
+          fi
+          curl -fsS --max-time 180 \
+            -X POST \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "https://${RAILWAY_PUBLIC_DOMAIN}/cron/digest"
