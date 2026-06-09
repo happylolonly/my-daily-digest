@@ -4,12 +4,16 @@ import html
 import re
 
 _NEWS_ITEM_SEP = " — "
-_ALLOWED_TAG_RE = re.compile(
-    r'<a\s+href="[^"]*">.*?</a>|</?(?:b|i|u|strong|em|code)(?:\s*/)?>',
-    re.IGNORECASE | re.DOTALL,
-)
 _FENCE_RE = re.compile(r"^```(?:html)?\s*|\s*```$", re.IGNORECASE | re.MULTILINE)
 _BR_RE = re.compile(r"<br\s*/?>", re.IGNORECASE)
+_MARKDOWN_LINK_RE = re.compile(r"\[([^\]]+)\]\((https?://[^)\s]+)\)")
+_MARKDOWN_BOLD_RE = re.compile(r"\*\*([^*\n][^*]*?)\*\*")
+_MARKDOWN_ITALIC_RE = re.compile(r"(?<!\*)\*([^*\n][^*]*?)\*(?!\*)")
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+_OPEN_SIMPLE_TAG_RE = re.compile(r"^<\s*(b|i|u|strong|em|code)\s*>$", re.IGNORECASE)
+_CLOSE_SIMPLE_TAG_RE = re.compile(r"^<\s*/\s*(b|i|u|strong|em|code)\s*>$", re.IGNORECASE)
+_OPEN_LINK_RE = re.compile(r'^<\s*a\s+href\s*=\s*"([^"]+)"\s*>$', re.IGNORECASE)
+_CLOSE_LINK_RE = re.compile(r"^<\s*/\s*a\s*>$", re.IGNORECASE)
 
 
 def normalize_telegram_html(text: str) -> str:
@@ -17,30 +21,101 @@ def normalize_telegram_html(text: str) -> str:
     text = text.strip()
     text = _FENCE_RE.sub("", text).strip()
     text = _BR_RE.sub("\n", text)
+    text = _MARKDOWN_LINK_RE.sub(r'<a href="\2">\1</a>', text)
+    text = _MARKDOWN_BOLD_RE.sub(r"<b>\1</b>", text)
+    text = _MARKDOWN_ITALIC_RE.sub(r"<i>\1</i>", text)
     return text
 
 
 def ensure_html_safe(text: str) -> str:
     """
-    Telegram HTML parse_mode accepts only a subset of tags.
-    Escape everything else; keep b/i/u/strong/em/code and <a href="...">.
+    Return Telegram-safe HTML.
+
+    Telegram HTML accepts only a small subset of tags. This escapes plain text
+    and href values, preserves only supported tags, and balances tags that an
+    LLM may leave open.
     """
     text = normalize_telegram_html(text)
-    stored: list[str] = []
+    result: list[str] = []
+    stack: list[str] = []
+    position = 0
 
-    def stash(match: re.Match[str]) -> str:
-        stored.append(match.group(0))
-        return f"__ALLOWED_TAG_{len(stored) - 1}__"
+    def append_text(value: str) -> None:
+        if value:
+            result.append(html.escape(value))
 
-    protected = _ALLOWED_TAG_RE.sub(stash, text)
-    escaped = html.escape(protected)
-    for index, tag in enumerate(stored):
-        escaped = escaped.replace(f"__ALLOWED_TAG_{index}__", tag)
-    return escaped
+    for match in _HTML_TAG_RE.finditer(text):
+        append_text(text[position : match.start()])
+        token = match.group(0)
+
+        open_link = _OPEN_LINK_RE.match(token)
+        if open_link:
+            href = html.escape(open_link.group(1), quote=True)
+            result.append(f'<a href="{href}">')
+            stack.append("a")
+            position = match.end()
+            continue
+
+        if _CLOSE_LINK_RE.match(token):
+            if stack and stack[-1] == "a":
+                result.append("</a>")
+                stack.pop()
+            else:
+                append_text(token)
+            position = match.end()
+            continue
+
+        open_simple = _OPEN_SIMPLE_TAG_RE.match(token)
+        if open_simple:
+            tag = open_simple.group(1).lower()
+            if stack and stack[-1] == "a":
+                position = match.end()
+                continue
+            result.append(f"<{tag}>")
+            stack.append(tag)
+            position = match.end()
+            continue
+
+        close_simple = _CLOSE_SIMPLE_TAG_RE.match(token)
+        if close_simple:
+            tag = close_simple.group(1).lower()
+            if stack and stack[-1] == "a":
+                position = match.end()
+                continue
+            if stack and stack[-1] == tag:
+                result.append(f"</{tag}>")
+                stack.pop()
+            else:
+                append_text(token)
+            position = match.end()
+            continue
+
+        append_text(token)
+        position = match.end()
+
+    append_text(text[position:])
+
+    while stack:
+        result.append(f"</{stack.pop()}>")
+
+    return "".join(result)
+
+
+def html_to_plain_text(text: str) -> str:
+    """Convert report HTML to readable plain text for Telegram fallback sends."""
+    text = normalize_telegram_html(text)
+    text = re.sub(
+        r'<a\s+href="([^"]+)">(.*?)</a>',
+        lambda match: f"{match.group(2)} ({match.group(1)})",
+        text,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    text = _HTML_TAG_RE.sub("", text)
+    return html.unescape(text).strip()
 
 
 def _esc(text: str) -> str:
-    return html.escape(text)
+    return text
 
 
 def _safe_or_unavailable(text: str | None) -> str:
@@ -107,14 +182,10 @@ def _format_news_item_line(line: str) -> str:
         left, url = line.rsplit(_NEWS_ITEM_SEP, 1)
         url = url.strip()
         if url.startswith("http"):
-            safe_href = html.escape(url, quote=True)
             if ". " in left and left[0].isdigit():
                 number, title = left.split(". ", 1)
-                return (
-                    f"{_esc(number)}. "
-                    f'<a href="{safe_href}">{_esc(title)}</a>'
-                )
-            return f'<a href="{safe_href}">{_esc(left)}</a>'
+                return f"{_esc(number)}. " + f'<a href="{url}">{_esc(title)}</a>'
+            return f'<a href="{url}">{_esc(left)}</a>'
 
     return _esc(line)
 
