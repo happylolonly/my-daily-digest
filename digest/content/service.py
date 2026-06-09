@@ -18,6 +18,7 @@ from digest.content.report import (
     build_plain_text_report_html,
     build_rates_html,
     build_weather_html,
+    format_motivation_html,
 )
 
 
@@ -53,7 +54,7 @@ def build_digest_html(section: DigestSection, *, use_gemini: bool = False) -> st
                 news_text=data.news,
             )
             if final_html:
-                return final_html
+                return final_html + format_motivation_html()
         return plain_fallback
 
     if section == DigestSection.WEATHER:

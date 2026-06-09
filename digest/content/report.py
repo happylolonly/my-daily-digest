@@ -1,8 +1,58 @@
 from __future__ import annotations
 
+import random
+
 from digest.content.telegram_html import ensure_html_safe
 
 _NEWS_ITEM_SEP = " — "
+
+_MOTIVATION_RU: tuple[str, ...] = (
+    "Делай сегодня то, что другие не хотят — завтра будешь жить так, как другие не могут.",
+    "Лучший способ предсказать будущее — создать его.",
+    "Начни с необходимого, сделай возможное — и внезапно окажешься на пороге невозможного.",
+    "Успех — это умение переходить от одной неудачи к другой, не теряя энтузиазма.",
+    "Не откладывай на завтра то, что можешь сделать сегодня.",
+    "Единственный способ делать великую работу — любить то, что ты делаешь.",
+    "Трудности готовят обычных людей к необычной судьбе.",
+    "Мечты не работают, пока не работаешь ты.",
+    "Каждое утро — новый шанс изменить свою жизнь.",
+    "Маленькие шаги каждый день приводят к большим результатам.",
+    "Смелость — не отсутствие страха, а решение действовать вопреки ему.",
+    "Ты сильнее, чем думаешь, и ближе к цели, чем кажется.",
+)
+
+_MOTIVATION_EN: tuple[str, ...] = (
+    "The only way to do great work is to love what you do.",
+    "Act as if what you do makes a difference. It does.",
+    "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+    "The future depends on what you do today.",
+    "Do one thing every day that scares you.",
+    "It always seems impossible until it's done.",
+    "Start where you are. Use what you have. Do what you can.",
+    "You don't have to be great to start, but you have to start to be great.",
+    "Progress, not perfection.",
+    "Every morning is a fresh start.",
+    "Dream big. Start small. Act now.",
+    "Believe you can and you're halfway there.",
+)
+
+
+def pick_motivation_quotes() -> tuple[str, str]:
+    return random.choice(_MOTIVATION_RU), random.choice(_MOTIVATION_EN)
+
+
+def _motivation_parts() -> list[str]:
+    ru, en = pick_motivation_quotes()
+    return [
+        "",
+        "<b>💪 На сегодня</b>",
+        f"«{ru}»",
+        f"<i>{en}</i>",
+    ]
+
+
+def format_motivation_html() -> str:
+    return ensure_html_safe("\n".join(_motivation_parts()))
 
 
 def _safe_or_unavailable(text: str | None) -> str:
@@ -155,5 +205,6 @@ def build_plain_text_report_html(
         "",
         "<b>📰 Новости</b>",
         _format_news_body(news_text),
+        *_motivation_parts(),
     ]
     return ensure_html_safe("\n".join(parts).strip())
