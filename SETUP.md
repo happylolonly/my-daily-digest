@@ -76,7 +76,8 @@ The script calls `init_observability()` and `flush_observability()` — traces a
 **GitHub** (cron only, 2 secrets):
 
 ```bash
-gh secret set CRON_SECRET < .env.production   # or set manually
+cp .env.production.example .env.production   # fill CRON_SECRET, RAILWAY_PUBLIC_DOMAIN
+gh secret set CRON_SECRET < .env.production
 gh secret set RAILWAY_PUBLIC_DOMAIN --body "my-app.up.railway.app"
 ```
 
