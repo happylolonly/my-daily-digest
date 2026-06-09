@@ -6,16 +6,21 @@ import os
 LANGFUSE_CLOUD_HOST = "https://cloud.langfuse.com"
 
 
+def _strip_env(value: str) -> str:
+    return value.strip().strip('"').strip("'")
+
+
 def init_observability() -> None:
     """Configure Langfuse Cloud tracing. No-op when keys are absent."""
-    public_key = os.environ.get("LANGFUSE_PUBLIC_KEY", "").strip()
-    secret_key = os.environ.get("LANGFUSE_SECRET_KEY", "").strip()
+    public_key = _strip_env(os.environ.get("LANGFUSE_PUBLIC_KEY", ""))
+    secret_key = _strip_env(os.environ.get("LANGFUSE_SECRET_KEY", ""))
 
     if not public_key or not secret_key:
         os.environ["LANGFUSE_TRACING_ENABLED"] = "false"
         return
 
-    os.environ.setdefault("LANGFUSE_BASE_URL", LANGFUSE_CLOUD_HOST)
+    base_url = _strip_env(os.environ.get("LANGFUSE_BASE_URL", "")) or LANGFUSE_CLOUD_HOST
+    os.environ["LANGFUSE_BASE_URL"] = base_url
 
 
 def langfuse_enabled() -> bool:
