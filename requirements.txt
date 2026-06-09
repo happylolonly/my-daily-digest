@@ -1,5 +1,6 @@
 python-telegram-bot[webhooks]>=22.5
 feedparser>=6.0.11
 google-genai>=1.0.0
+langfuse>=3.0.0
 requests>=2.32.0
 python-dotenv>=1.0.1

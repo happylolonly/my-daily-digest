@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import time
 
 from google import genai
 from google.genai import errors as genai_errors
+from langfuse import get_client, observe, propagate_attributes
 
 from digest.content.telegram_html import ensure_html_safe
+from digest.observability import langfuse_enabled
 
 GEMINI_MODEL = "gemini-2.5-flash"
 GEMINI_RETRY_ATTEMPTS = 3
@@ -82,6 +85,60 @@ def _is_retryable_error(exc: Exception) -> bool:
     return isinstance(exc, genai_errors.ServerError) and exc.code == 503
 
 
+def _trace_source() -> str:
+    if os.environ.get("GITHUB_ACTIONS"):
+        return "github-actions"
+    return "bot"
+
+
+@observe(name="digest-gemini", as_type="generation")
+def _generate_gemini_content(prompt: str) -> str | None:
+    get_client().update_current_generation(model=GEMINI_MODEL, input=prompt)
+
+    client = genai.Client()
+
+    for attempt in range(1, GEMINI_RETRY_ATTEMPTS + 1):
+        try:
+            response = client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=prompt,
+            )
+            raw_text = (response.text or "").strip()
+            if raw_text:
+                usage = response.usage_metadata
+                if usage is not None:
+                    get_client().update_current_generation(
+                        output=raw_text,
+                        usage_details={
+                            "input": usage.prompt_token_count or 0,
+                            "output": usage.candidates_token_count or 0,
+                            "total": usage.total_token_count or 0,
+                        },
+                    )
+                else:
+                    get_client().update_current_generation(output=raw_text)
+                return ensure_html_safe(raw_text)
+            logging.warning(
+                "Gemini model %s returned empty text (attempt %s/%s)",
+                GEMINI_MODEL,
+                attempt,
+                GEMINI_RETRY_ATTEMPTS,
+            )
+        except (genai_errors.ClientError, genai_errors.ServerError) as exc:
+            if not _is_retryable_error(exc) or attempt >= GEMINI_RETRY_ATTEMPTS:
+                raise
+            logging.warning(
+                "Gemini error %s, retry in %ss (%s/%s)",
+                exc.code,
+                GEMINI_RETRY_DELAY_S,
+                attempt,
+                GEMINI_RETRY_ATTEMPTS,
+            )
+            time.sleep(GEMINI_RETRY_DELAY_S)
+
+    return None
+
+
 def generate_report_html_with_gemini(
     report_date: str,
     weather_text: str | None,
@@ -102,36 +159,17 @@ def generate_report_html_with_gemini(
     )
 
     try:
-        client = genai.Client()
-
-        for attempt in range(1, GEMINI_RETRY_ATTEMPTS + 1):
-            try:
-                response = client.models.generate_content(
-                    model=GEMINI_MODEL,
-                    contents=prompt,
-                )
-                raw_text = (response.text or "").strip()
-                if raw_text:
-                    return ensure_html_safe(raw_text)
-                logging.warning(
-                    "Gemini model %s returned empty text (attempt %s/%s)",
-                    GEMINI_MODEL,
-                    attempt,
-                    GEMINI_RETRY_ATTEMPTS,
-                )
-            except (genai_errors.ClientError, genai_errors.ServerError) as exc:
-                if not _is_retryable_error(exc) or attempt >= GEMINI_RETRY_ATTEMPTS:
-                    raise
-                logging.warning(
-                    "Gemini error %s, retry in %ss (%s/%s)",
-                    exc.code,
-                    GEMINI_RETRY_DELAY_S,
-                    attempt,
-                    GEMINI_RETRY_ATTEMPTS,
-                )
-                time.sleep(GEMINI_RETRY_DELAY_S)
-
-        return None
+        if langfuse_enabled():
+            with propagate_attributes(
+                trace_name="daily-digest",
+                metadata={
+                    "source": _trace_source(),
+                    "report_date": report_date,
+                },
+                tags=["daily-digest"],
+            ):
+                return _generate_gemini_content(prompt)
+        return _generate_gemini_content(prompt)
     except Exception:
         logging.exception("Gemini generation failed (model=%s)", GEMINI_MODEL)
         return None

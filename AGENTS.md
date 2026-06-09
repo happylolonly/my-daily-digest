@@ -80,6 +80,7 @@ GitHub Secrets / Railway Variables / `.env` локально:
 - `TELEGRAM_CHAT_ID` — куда слать cron-дайджест (`main.py`)
 - `TELEGRAM_USER_ID` — кто может вызывать команды бота (fallback: `TELEGRAM_CHAT_ID`)
 - `GEMINI_API_KEY`
+- `LANGFUSE_PUBLIC_KEY` + `LANGFUSE_SECRET_KEY` — Langfuse Cloud (опционально, трейсинг Gemini)
 - `WEBHOOK_URL` + `WEBHOOK_SECRET` — Railway prod (webhook); локально не задавать
 
 Не коммитить секреты. Не добавлять `.env` в git.

@@ -4,11 +4,13 @@ import os
 
 from digest.config import load_local_env, setup_logging
 from digest.content.service import DigestSection, build_digest_html
+from digest.observability import flush_observability, init_observability
 from digest.telegram.delivery import send_telegram_message
 
 
 def main() -> None:
     load_local_env()
+    init_observability()
     setup_logging()
 
     telegram_bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
@@ -24,6 +26,7 @@ def main() -> None:
         bot_token=telegram_bot_token,
         html_text=final_html,
     )
+    flush_observability()
 
 
 if __name__ == "__main__":

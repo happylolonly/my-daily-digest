@@ -42,7 +42,15 @@ class RedactSecretsFilter(logging.Filter):
 
 
 def setup_logging() -> None:
-    secrets = (os.environ.get("TELEGRAM_BOT_TOKEN", "").strip(),)
+    secrets = tuple(
+        s
+        for s in (
+            os.environ.get("TELEGRAM_BOT_TOKEN", "").strip(),
+            os.environ.get("GEMINI_API_KEY", "").strip(),
+            os.environ.get("LANGFUSE_SECRET_KEY", "").strip(),
+        )
+        if s
+    )
     logging.basicConfig(
         level=os.environ.get("LOG_LEVEL", "INFO"),
         format="%(asctime)s %(levelname)s %(message)s",

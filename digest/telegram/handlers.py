@@ -10,6 +10,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandl
 
 from digest.content.telegram_html import html_to_plain_text
 from digest.content.service import DigestSection, build_digest_html
+from digest.observability import flush_observability
 
 HELP_TEXT = (
     "<b>Daily Digest Bot</b>\n\n"
@@ -89,6 +90,8 @@ async def run_section(
             build_digest_html, section, use_gemini=use_gemini
         )
         await edit_html_message(status, html)
+        if use_gemini and section == DigestSection.FULL:
+            await asyncio.to_thread(flush_observability)
     except Exception:
         logging.exception("command %s failed", section.value)
         await status.edit_text("Ошибка при сборе данных.")

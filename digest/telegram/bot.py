@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 
 from digest.config import load_local_env, setup_logging
+from digest.observability import init_observability
 from digest.telegram.handlers import authorized_user_id
 from digest.telegram.runtime import run_polling, run_webhook
 from digest.telegram.webhook import resolve_webhook_config
@@ -10,6 +11,7 @@ from digest.telegram.webhook import resolve_webhook_config
 
 def run_bot() -> None:
     load_local_env()
+    init_observability()
     setup_logging()
 
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
