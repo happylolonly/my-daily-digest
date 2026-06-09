@@ -18,8 +18,7 @@ def main() -> None:
     if not telegram_bot_token or not telegram_chat_id:
         raise RuntimeError("TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are required.")
 
-    gemini_enabled = bool(os.environ.get("GEMINI_API_KEY", "").strip())
-    final_html = build_digest_html(DigestSection.FULL, use_gemini=gemini_enabled)
+    final_html = build_digest_html(DigestSection.FULL)
 
     send_telegram_message(
         chat_id=telegram_chat_id,

@@ -33,6 +33,8 @@ BOT_COMMANDS = [
 
 UNAUTHORIZED_TEXT = "Это личный бот. Доступ только у владельца."
 
+_OBSERVABILITY_SECTIONS = frozenset({DigestSection.FULL, DigestSection.NEWS})
+
 
 def authorized_user_id() -> str:
     user_id = os.environ.get("TELEGRAM_USER_ID", "").strip()
@@ -71,12 +73,7 @@ async def edit_html_message(message, html_text: str) -> None:
         )
 
 
-async def run_section(
-    update: Update,
-    section: DigestSection,
-    *,
-    use_gemini: bool = False,
-) -> None:
+async def run_section(update: Update, section: DigestSection) -> None:
     if update.message is None:
         return
 
@@ -86,11 +83,9 @@ async def run_section(
 
     status = await update.message.reply_text("⏳ Собираю данные...")
     try:
-        html = await asyncio.to_thread(
-            build_digest_html, section, use_gemini=use_gemini
-        )
+        html = await asyncio.to_thread(build_digest_html, section)
         await edit_html_message(status, html)
-        if use_gemini and section in (DigestSection.FULL, DigestSection.NEWS):
+        if section in _OBSERVABILITY_SECTIONS:
             await asyncio.to_thread(flush_observability)
     except Exception:
         logging.exception("command %s failed", section.value)
@@ -110,8 +105,7 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def cmd_digest(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    gemini_enabled = bool(os.environ.get("GEMINI_API_KEY", "").strip())
-    await run_section(update, DigestSection.FULL, use_gemini=gemini_enabled)
+    await run_section(update, DigestSection.FULL)
 
 
 async def cmd_weather(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -123,8 +117,7 @@ async def cmd_rates(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def cmd_news(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    gemini_enabled = bool(os.environ.get("GEMINI_API_KEY", "").strip())
-    await run_section(update, DigestSection.NEWS, use_gemini=gemini_enabled)
+    await run_section(update, DigestSection.NEWS)
 
 
 async def on_unauthorized_message(

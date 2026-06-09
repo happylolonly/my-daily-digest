@@ -200,6 +200,8 @@ def build_plain_text_report_html(
     prices_text: str | None,
     forex_text: str | None,
     news_text: str | None,
+    *,
+    include_motivation: bool = True,
 ) -> str:
     parts: list[str] = [
         f"<b>📅 {report_date}</b>",
@@ -212,6 +214,24 @@ def build_plain_text_report_html(
         "",
         "<b>📰 Новости</b>",
         _format_news_body(news_text),
-        *_motivation_parts(),
     ]
+    if include_motivation:
+        parts.extend(_motivation_parts())
     return ensure_html_safe("\n".join(parts).strip())
+
+
+def build_full_digest_html(
+    report_date: str,
+    weather_text: str | None,
+    prices_text: str | None,
+    forex_text: str | None,
+    news_text: str | None,
+) -> str:
+    return build_plain_text_report_html(
+        report_date=report_date,
+        weather_text=weather_text,
+        prices_text=prices_text,
+        forex_text=forex_text,
+        news_text=news_text,
+        include_motivation=True,
+    )
