@@ -8,6 +8,7 @@ from telegram import BotCommand, Update
 from telegram.constants import ParseMode
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
+from digest.content.report import html_to_plain_text
 from digest.content.service import DigestSection, build_digest_html
 
 HELP_TEXT = (
@@ -61,9 +62,12 @@ async def edit_html_message(message, html_text: str) -> None:
         )
     except Exception:
         logging.exception(
-            "Telegram edit failed with parse_mode=HTML, retrying without it"
+            "Telegram edit failed with parse_mode=HTML, retrying as plain text"
         )
-        await message.edit_text(html_text, disable_web_page_preview=True)
+        await message.edit_text(
+            html_to_plain_text(html_text),
+            disable_web_page_preview=True,
+        )
 
 
 async def run_section(
