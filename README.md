@@ -15,8 +15,8 @@ Full digest HTML is assembled in code (`report.py`) — no LLM for weather/rates
 ## Stack
 
 - Python 3.11+
-- **GitHub Actions** — scheduled digest (`main.py`)
-- **Railway** — Telegram bot commands (`bot.py`, webhook or polling)
+- **GitHub Actions** — cron trigger (`curl POST /cron/digest`)
+- **Railway** — digest execution + Telegram bot (`bot.py`, webhook or polling)
 - **OpenRouter** — news (Perplexity Sonar)
 - **Langfuse** — optional tracing
 - python-telegram-bot, requests, feedparser
@@ -26,7 +26,7 @@ Full digest HTML is assembled in code (`report.py`) — no LLM for weather/rates
 ```bash
 cp .env.example .env   # fill TELEGRAM_* and OPENROUTER_API_KEY
 pip install -r requirements.txt
-python main.py         # send full digest once
+python main.py         # send full digest once (local)
 python bot.py          # bot (polling locally)
 ```
 
@@ -35,7 +35,8 @@ python bot.py          # bot (polling locally)
 ## Project layout
 
 ```
-main.py              # cron entry: full digest → Telegram
+main.py              # local: full digest → Telegram
+digest/scheduled.py  # deliver_scheduled_digest() — cron + main.py
 bot.py               # bot entry: /digest, /news, …
 digest/
   content/
@@ -48,14 +49,15 @@ digest/
   telegram/          # bot, webhook, delivery
 scripts/
   openrouter_call.py # debug OpenRouter + Langfuse
-.github/workflows/   # daily cron
+.github/workflows/   # daily cron → Railway
 ```
 
 ## Modes
 
 | Mode | Entry | Where |
 |------|-------|-------|
-| Scheduled digest | `python main.py` | GitHub Actions |
+| Scheduled digest | `POST /cron/digest` | GitHub Actions → Railway |
+| Local digest | `python main.py` | dev machine |
 | Bot commands | `python bot.py` | Railway or local |
 
 Agent / contributor notes: **[AGENTS.md](AGENTS.md)**.
