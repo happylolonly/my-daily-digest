@@ -49,6 +49,7 @@ def setup_logging() -> None:
             os.environ.get("GEMINI_API_KEY", "").strip(),
             os.environ.get("OPENROUTER_API_KEY", "").strip(),
             os.environ.get("LANGFUSE_SECRET_KEY", "").strip(),
+            os.environ.get("CRON_SECRET", "").strip(),
         )
         if s
     )
@@ -63,7 +64,7 @@ def setup_logging() -> None:
 
 
 def load_local_env() -> None:
-    """Loads .env only for local runs. In GitHub Actions we rely on Actions env/secrets."""
+    """Loads .env for local runs. Skipped in CI (GitHub Actions has no app .env)."""
     if os.environ.get("GITHUB_ACTIONS"):
         return
     try:
