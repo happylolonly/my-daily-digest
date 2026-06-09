@@ -1,75 +1,62 @@
 # Daily Digest Bot
 
-A personal daily report delivered to Telegram on a schedule.
+Personal morning briefing in Telegram: weather, crypto/forex rates, and news (AI, crypto, geopolitics).
 
-Each run collects fresh data, formats it with AI, and sends a single HTML message:
+Stateless — no database, each run is independent.
 
-- Weather
-- BTC / ETH prices and VND/USD
-- News from the last 24 hours (AI, crypto, geopolitics)
+## What it sends
 
-Stateless by design — no database, one independent run per day.
+- **Weather** — Da Nang (wttr.in)
+- **Rates** — BTC, ETH (CoinGecko), VND/USD (forex API)
+- **News** — 3 topics via [OpenRouter](https://openrouter.ai) (`perplexity/sonar`): Russian summary + links; search in English
+
+Full digest HTML is assembled in code (`report.py`) — no LLM for weather/rates layout.
 
 ## Stack
 
-- **Python 3.11+**
-- **GitHub Actions** — scheduling and hosting
-- **AI (LLM)** — report formatting (`google-generativeai`)
-- **python-telegram-bot** — Telegram delivery
-- **requests** + **feedparser** — weather, crypto, forex, RSS feeds
+- Python 3.11+
+- **GitHub Actions** — scheduled digest (`main.py`)
+- **Railway** — Telegram bot commands (`bot.py`, webhook or polling)
+- **OpenRouter** — news (Perplexity Sonar)
+- **Langfuse** — optional tracing
+- python-telegram-bot, requests, feedparser
+
+## Quick start
+
+```bash
+cp .env.example .env   # fill TELEGRAM_* and OPENROUTER_API_KEY
+pip install -r requirements.txt
+python main.py         # send full digest once
+python bot.py          # bot (polling locally)
+```
+
+**Full setup** (secrets, GitHub, Railway, Langfuse, debug scripts): see **[SETUP.md](SETUP.md)**.
 
 ## Project layout
 
 ```
-main.py                 # entry point
-digest/                 # fetchers, report builder, LLM, Telegram
-.github/workflows/      # daily cron + manual trigger
+main.py              # cron entry: full digest → Telegram
+bot.py               # bot entry: /digest, /news, …
+digest/
+  content/
+    service.py       # build sections
+    report.py        # Telegram HTML
+    openrouter.py    # OpenRouter client
+    news/            # news topics, prompt, parse, fetch
+    fetchers/        # weather, crypto, forex, RSS (RSS unused in hot path)
+    llm.py           # Gemini (reserved, not used in hot path)
+  telegram/          # bot, webhook, delivery
+scripts/
+  sync-secrets.sh    # push .env → GitHub / Railway
+  openrouter_call.py # debug OpenRouter + Langfuse
+.github/workflows/   # daily cron
 ```
 
-## Run locally
+## Modes
 
-1. Copy env template and fill in secrets:
+| Mode | Entry | Where |
+|------|-------|-------|
+| Scheduled digest | `python main.py` | GitHub Actions |
+| Bot commands | `python bot.py` | Railway or local |
 
-```bash
-cp .env.example .env
-```
-
-Required variables:
-
-| Variable | Description |
-|---|---|
-| `TELEGRAM_BOT_TOKEN` | Bot token from [@BotFather](https://t.me/BotFather) |
-| `TELEGRAM_CHAT_ID` | Target chat ID |
-| `GEMINI_API_KEY` | AI provider API key |
-
-2. Install dependencies and run:
-
-```bash
-pip install -r requirements.txt
-python main.py
-```
-
-If the AI provider is unavailable, the bot falls back to a plain HTML report built from raw data.
-
-## Dev container
-
-Open the repo in VS Code / Cursor and choose **Reopen in Container**.
-
-The devcontainer (`.devcontainer/devcontainer.json`) provides:
-
-- Python 3.11 image
-- GitHub CLI
-- Python extensions (Pylance, debugpy, Black)
-- Auto `pip install` on create via `postCreateCommand`
-
-Then create `.env` and run `python main.py` inside the container.
-
-## GitHub Actions
-
-Add repository secrets:
-
-- `TELEGRAM_BOT_TOKEN`
-- `TELEGRAM_CHAT_ID`
-- `GEMINI_API_KEY`
-
-The workflow runs on schedule or manually via **Actions → Daily Digest → Run workflow**.
+Agent / contributor notes: **[AGENTS.md](AGENTS.md)**.
