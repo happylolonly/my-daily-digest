@@ -5,6 +5,8 @@ import logging
 
 from telegram import Bot
 
+from digest.content.report import html_to_plain_text
+
 
 async def _send_telegram_message_async(
     chat_id: str, bot_token: str, html_text: str
@@ -19,11 +21,11 @@ async def _send_telegram_message_async(
         )
     except Exception:
         logging.exception(
-            "Telegram send failed with parse_mode=HTML, retrying without it"
+            "Telegram send failed with parse_mode=HTML, retrying as plain text"
         )
         await bot.send_message(
             chat_id=chat_id,
-            text=html_text,
+            text=html_to_plain_text(html_text),
             disable_web_page_preview=True,
         )
 
