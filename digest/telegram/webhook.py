@@ -42,7 +42,10 @@ class CronDigestHandler(tornado.web.RequestHandler):
 
         loop = tornado.ioloop.IOLoop.current()
         try:
-            await loop.run_in_executor(None, deliver_scheduled_digest)
+            await loop.run_in_executor(
+                None,
+                lambda: deliver_scheduled_digest(source="railway-cron"),
+            )
         except Exception:
             logging.exception("scheduled digest failed")
             self.set_status(500)

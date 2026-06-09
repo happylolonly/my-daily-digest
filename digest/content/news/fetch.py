@@ -12,15 +12,10 @@ from digest.content.news.prompt import build_topic_prompt
 from digest.content.news.topics import NEWS_TOPICS, NewsTopic
 from digest.content.openrouter import chat_completion, openrouter_api_key
 from digest.observability import langfuse_enabled
+from digest.trace_source import trace_source
 
 DEFAULT_NEWS_MODEL = "perplexity/sonar"
 TOPIC_TIMEOUT_S = 30
-
-
-def _trace_source() -> str:
-    if os.environ.get("GITHUB_ACTIONS"):
-        return "github-actions"
-    return "bot"
 
 
 def news_model() -> str:
@@ -50,7 +45,7 @@ def _fetch_topic_payload(topic: NewsTopic, report_date: str) -> dict[str, Any] |
         with propagate_attributes(
             trace_name="openrouter-news",
             metadata={
-                "source": _trace_source(),
+                "source": trace_source(),
                 "report_date": report_date,
                 "topic": label,
                 "model": news_model(),

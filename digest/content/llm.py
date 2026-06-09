@@ -11,6 +11,7 @@ from langfuse import get_client, observe, propagate_attributes
 
 from digest.content.telegram_html import ensure_html_safe
 from digest.observability import langfuse_enabled
+from digest.trace_source import trace_source
 
 GEMINI_MODEL = "gemini-2.5-flash"
 GEMINI_RETRY_ATTEMPTS = 3
@@ -136,12 +137,6 @@ def _is_retryable_error(exc: Exception) -> bool:
     return isinstance(exc, genai_errors.ServerError) and exc.code == 503
 
 
-def _trace_source() -> str:
-    if os.environ.get("GITHUB_ACTIONS"):
-        return "github-actions"
-    return "bot"
-
-
 @observe(name="digest-gemini", as_type="generation")
 def _generate_gemini_content(prompt: str) -> str | None:
     get_client().update_current_generation(model=GEMINI_MODEL, input=prompt)
@@ -202,7 +197,7 @@ def _run_gemini_prompt(
             with propagate_attributes(
                 trace_name=trace_name,
                 metadata={
-                    "source": _trace_source(),
+                    "source": trace_source(),
                     "report_date": report_date,
                 },
                 tags=tags,
