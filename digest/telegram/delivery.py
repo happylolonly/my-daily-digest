@@ -5,7 +5,7 @@ import logging
 
 from telegram import Bot
 
-from digest.content.report import html_to_plain_text
+from digest.content.telegram_html import html_to_plain_text
 
 
 async def _send_telegram_message_async(
