@@ -4,6 +4,8 @@ on:
   schedule:
     # 0 1 * * * UTC = 8:00 Da Nang (UTC+7)
     - cron: "0 1 * * *"
+    # 0 11 * * * UTC = 18:00 Da Nang (UTC+7)
+    - cron: "0 11 * * *"
   workflow_dispatch:
 
 jobs:
