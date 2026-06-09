@@ -47,7 +47,6 @@ digest/
     llm.py           # Gemini (reserved, not used in hot path)
   telegram/          # bot, webhook, delivery
 scripts/
-  sync-secrets.sh    # push .env → GitHub / Railway
   openrouter_call.py # debug OpenRouter + Langfuse
 .github/workflows/   # daily cron
 ```

@@ -4,7 +4,7 @@
 
 **Daily Digest Bot** — персональный утренний брифинг в Telegram.
 
-GitHub Actions запускает полный дайджест **2 раза в день** (8:00 и 18:00 Da Nang, UTC+7):
+GitHub Actions **2 раза в день** (8:00 и 18:00 Da Nang, UTC+7) дергает `POST /cron/digest` на Railway; сборка и отправка — на сервере:
 
 - Погода в Da Nang
 - Курсы: BTC, ETH, VND/USD
@@ -19,7 +19,8 @@ GitHub Actions запускает полный дайджест **2 раза в 
 ## Структура
 
 ```
-main.py                  # cron: утренний дайджест → Telegram
+main.py                  # локально: дайджест → Telegram (как cron)
+digest/scheduled.py      # deliver_scheduled_digest() — cron + main.py
 bot.py                   # entry point → digest.telegram.bot.run_bot()
 digest/
   config.py              # logging, timezone, load_local_env
@@ -37,7 +38,6 @@ digest/
     fetchers/            # wttr.in, CoinGecko, forex, news.py (RSS — не в hot path)
   telegram/              # бот: команды, webhook, доставка
 scripts/
-  sync-secrets.sh        # .env → GitHub / Railway
   openrouter_call.py     # dev: вызов OpenRouter + Langfuse
 requirements.txt
 railway.toml
@@ -48,7 +48,7 @@ railway.toml
 
 | Режим | Entry point | Где запускать |
 |-------|-------------|---------------|
-| Дайджест по расписанию | `python main.py` | GitHub Actions |
+| Дайджест по расписанию | `POST /cron/digest` | GitHub Actions → Railway |
 | Команды `/digest`, `/weather`, … | `python bot.py` | Railway (webhook) или локально (polling) |
 
 **Режим бота:** если задан `WEBHOOK_URL` или `RAILWAY_PUBLIC_DOMAIN` + `WEBHOOK_SECRET` → webhook; иначе polling.
@@ -89,7 +89,9 @@ RSS (`fetchers/news.py`) и Gemini (`llm.py`) в репозитории, но **
 
 См. [`SETUP.md`](SETUP.md). Кратко:
 
-- `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `OPENROUTER_API_KEY` — обязательные для prod
+- `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `OPENROUTER_API_KEY` — обязательные на Railway
+- `CRON_SECRET` — GitHub Actions + Railway (`Authorization: Bearer`)
+- `RAILWAY_PUBLIC_DOMAIN` — в GitHub secrets для cron workflow
 - `TELEGRAM_USER_ID` — авторизация команд бота
 - `LANGFUSE_*` — опционально
 - `WEBHOOK_*` — Railway prod
@@ -98,7 +100,7 @@ RSS (`fetchers/news.py`) и Gemini (`llm.py`) в репозитории, но **
 
 ## Workflow
 
-- **GitHub Actions:** cron 8:00 и 18:00 Da Nang; `workflow_dispatch`; `python main.py`
+- **GitHub Actions:** cron 8:00 и 18:00 Da Nang; `workflow_dispatch`; `curl POST /cron/digest`
 - **Railway:** `python bot.py`; Serverless; `GET /health`
 - **Отладка новостей:** `python scripts/openrouter_call.py --topic ai`
 

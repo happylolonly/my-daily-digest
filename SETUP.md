@@ -1,168 +1,167 @@
-# Настройка Daily Digest Bot
+# Daily Digest Bot Setup
 
-Пошаговая инструкция: локальный запуск, секреты, GitHub Actions, Railway, OpenRouter, Langfuse.
+Step-by-step guide: local run, secrets, GitHub Actions, Railway, OpenRouter, Langfuse.
 
-## 1. Переменные окружения
+## 1. Environment variables
 
-Скопируй шаблон и заполни значения:
+Copy the template and fill in values:
 
 ```bash
 cp .env.example .env
 ```
 
-### Обязательные
+### Required
 
-| Переменная | Где нужна | Описание |
-|------------|-----------|----------|
-| `TELEGRAM_BOT_TOKEN` | везде | Токен от [@BotFather](https://t.me/BotFather) |
-| `TELEGRAM_CHAT_ID` | cron (`main.py`) | Chat ID для утреннего дайджеста |
-| `OPENROUTER_API_KEY` | новости | Ключ [OpenRouter](https://openrouter.ai/keys); модель по умолчанию `perplexity/sonar` |
+| Variable | Where | Description |
+|----------|-------|-------------|
+| `TELEGRAM_BOT_TOKEN` | everywhere | Token from [@BotFather](https://t.me/BotFather) |
+| `TELEGRAM_CHAT_ID` | Railway / `main.py` | Chat ID for scheduled digest delivery |
+| `OPENROUTER_API_KEY` | news | [OpenRouter](https://openrouter.ai/keys) key; default model `perplexity/sonar` |
 
-### Для бота (Railway / локально)
+### Bot (Railway / local)
 
-| Переменная | Описание |
-|------------|----------|
-| `TELEGRAM_USER_ID` | Кто может вызывать команды (`/digest`, `/news`, …). Fallback: `TELEGRAM_CHAT_ID` |
-| `WEBHOOK_URL` + `WEBHOOK_SECRET` | Railway prod (webhook). Локально не задавать → polling |
-| `RAILWAY_PUBLIC_DOMAIN` | Альтернатива `WEBHOOK_URL` (ставит Railway) |
+| Variable | Description |
+|----------|-------------|
+| `TELEGRAM_USER_ID` | Who can run commands (`/digest`, `/news`, …). Fallback: `TELEGRAM_CHAT_ID` |
+| `WEBHOOK_URL` + `WEBHOOK_SECRET` | Railway prod (webhook). Leave unset locally → polling |
+| `RAILWAY_PUBLIC_DOMAIN` | Alternative to `WEBHOOK_URL` (set automatically on Railway) |
 
-### Опциональные
+### Optional
 
-| Переменная | Описание |
-|------------|----------|
-| `OPENROUTER_NEWS_MODEL` | Модель новостей (default: `perplexity/sonar`) |
-| `OPENROUTER_HTTP_REFERER` | Referer для OpenRouter (рейтинги на openrouter.ai) |
-| `OPENROUTER_APP_TITLE` | Название приложения в OpenRouter (default: `Daily Digest Bot`) |
-| `LANGFUSE_PUBLIC_KEY` + `LANGFUSE_SECRET_KEY` | [Langfuse Cloud](https://cloud.langfuse.com) — трейсинг OpenRouter |
-| `LANGFUSE_BASE_URL` | Default: `https://cloud.langfuse.com` (без кавычек в значении) |
-| `GEMINI_API_KEY` | Зарезервировано; сейчас **не используется** в hot path (`digest/content/llm.py`) |
-| `RAILWAY_TOKEN` | Только локально: для `sync-secrets.sh` и Railway CLI |
+| Variable | Description |
+|----------|-------------|
+| `OPENROUTER_NEWS_MODEL` | News model (default: `perplexity/sonar`) |
+| `OPENROUTER_HTTP_REFERER` | Referer for OpenRouter (rankings on openrouter.ai) |
+| `OPENROUTER_APP_TITLE` | App title in OpenRouter (default: `Daily Digest Bot`) |
+| `LANGFUSE_PUBLIC_KEY` + `LANGFUSE_SECRET_KEY` | [Langfuse Cloud](https://cloud.langfuse.com) — OpenRouter tracing |
+| `LANGFUSE_BASE_URL` | Default: `https://cloud.langfuse.com` (no quotes in value) |
+| `GEMINI_API_KEY` | Reserved; **not used** in hot path (`digest/content/llm.py`) |
+| `RAILWAY_TOKEN` | Local only: Railway CLI (`railway link`, `railway variable set`) |
+| `CRON_SECRET` | Shared secret for `POST /cron/digest` (GitHub Actions + Railway) |
 
-Не коммить `.env` в git.
+Do not commit `.env` to git.
 
-## 2. Локальный запуск
+## 2. Local run
 
 ```bash
 pip install -r requirements.txt
 ```
 
-**Утренний дайджест (как cron):**
+**Scheduled digest (same as cron):**
 
 ```bash
 python main.py
 ```
 
-**Telegram-бот (команды):**
+**Telegram bot (commands):**
 
 ```bash
 python bot.py
 ```
 
-Без `WEBHOOK_URL` / `WEBHOOK_SECRET` бот работает в режиме **polling**.
+Without `WEBHOOK_URL` / `WEBHOOK_SECRET`, the bot runs in **polling** mode.
 
-### Проверка новостей (OpenRouter + Langfuse)
-
-```bash
-python scripts/openrouter_call.py --topic ai      # одна тема
-python scripts/openrouter_call.py --topic all     # все 3 темы
-python scripts/openrouter_call.py --topic ai --raw  # сырой JSON API
-```
-
-Скрипт сам вызывает `init_observability()` и `flush_observability()` — трейс появится в Langfuse, если ключи заданы.
-
-## 3. Синхронизация секретов
-
-Скрипт пушит значения из `.env` в GitHub Actions и Railway:
+### News debug (OpenRouter + Langfuse)
 
 ```bash
-./scripts/sync-secrets.sh --dry-run                    # посмотреть, что уйдёт
-./scripts/sync-secrets.sh --only OPENROUTER_API_KEY     # один ключ
-./scripts/sync-secrets.sh --github-only                # только GitHub
-./scripts/sync-secrets.sh --railway-only               # только Railway
+python scripts/openrouter_call.py --topic ai      # one topic
+python scripts/openrouter_call.py --topic all     # all 3 topics
+python scripts/openrouter_call.py --topic ai --raw  # raw API JSON
 ```
 
-**Требования:**
+The script calls `init_observability()` and `flush_observability()` — traces appear in Langfuse when keys are set.
 
-- GitHub: `gh auth login` или `GH_TOKEN`
-- Railway: `RAILWAY_TOKEN` в `.env` или `railway link`
+## 3. Secrets (CLI)
 
-**GitHub secrets:** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `OPENROUTER_API_KEY`, `LANGFUSE_*` (опционально)
+**GitHub** (cron only, 2 secrets):
 
-**Railway variables:** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_USER_ID`, `OPENROUTER_API_KEY`, `LANGFUSE_*`, `WEBHOOK_*`
+```bash
+gh secret set CRON_SECRET < .env.production   # or set manually
+gh secret set RAILWAY_PUBLIC_DOMAIN --body "my-app.up.railway.app"
+```
+
+**Railway** (bot + digest):
+
+```bash
+railway variable set TELEGRAM_BOT_TOKEN=... OPENROUTER_API_KEY=... CRON_SECRET=...
+```
+
+Full Railway variable list: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_USER_ID`, `OPENROUTER_API_KEY`, `LANGFUSE_*`, `WEBHOOK_*`, `CRON_SECRET`
 
 ## 4. GitHub Actions (cron)
 
 Workflow: [`.github/workflows/daily.yml`](.github/workflows/daily.yml)
 
-- **08:00 и 18:00 Da Nang** (UTC+7) — два cron в день
-- Ручной запуск: **Actions → Daily Digest → Run workflow**
+- **08:00 and 18:00 Da Nang** (UTC+7) — two runs per day
+- Manual run: **Actions → Daily Digest → Run workflow**
 
-Секреты репозитория (минимум):
+Repository secrets:
 
-- `TELEGRAM_BOT_TOKEN`
-- `TELEGRAM_CHAT_ID`
-- `OPENROUTER_API_KEY`
+- `CRON_SECRET` — same random string as on Railway
+- `RAILWAY_PUBLIC_DOMAIN` — e.g. `my-app.up.railway.app` (no `https://`)
 
-Опционально: `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`
+The workflow only wakes Railway and waits for a response (up to 180 s). All API keys stay on Railway.
 
-## 5. Railway (бот)
+## 5. Railway (bot)
 
-Конфиг: [`railway.toml`](railway.toml)
+Config: [`railway.toml`](railway.toml)
 
 - **Start command:** `python bot.py`
 - **Healthcheck:** `GET /health`
-- Включить **Serverless** в UI Railway
-- Задать переменные (см. sync-secrets выше)
+- Enable **Serverless** in the Railway UI
+- Set variables (see §3)
 
-Режим webhook: `WEBHOOK_URL` или `RAILWAY_PUBLIC_DOMAIN` + `WEBHOOK_SECRET`.
+Webhook mode: `WEBHOOK_URL` or `RAILWAY_PUBLIC_DOMAIN` + `WEBHOOK_SECRET`.
+
+Cron endpoint: `POST /cron/digest` with `Authorization: Bearer <CRON_SECRET>`.
 
 ## 6. Langfuse
 
-Если ключи пустые — трейсинг отключён (`LANGFUSE_TRACING_ENABLED=false`).
+If keys are empty, tracing is disabled (`LANGFUSE_TRACING_ENABLED=false`).
 
-Трейсы новостей:
+News traces:
 
-- `openrouter-news` — запросы по темам (ИИ / Крипта / Геополитика)
-- `openrouter-chat` — низкоуровневый вызов API
+- `openrouter-news` — per-topic requests (AI / Crypto / Geopolitics)
+- `openrouter-chat` — low-level API call
 
-Типичная ошибка: лишние кавычки в `.env`:
+Common mistake: extra quotes in `.env`:
 
 ```bash
-# плохо
+# bad
 LANGFUSE_BASE_URL="https://cloud.langfuse.com"
 
-# хорошо
+# good
 LANGFUSE_BASE_URL=https://cloud.langfuse.com
 ```
 
-Код также срезает кавычки в `digest/observability.py`.
+The code also strips quotes in `digest/observability.py`.
 
 ## 7. Dev container
 
 VS Code / Cursor → **Reopen in Container**.
 
-- Python 3.11, GitHub CLI, `pip install` при создании
-- Создай `.env` и запускай команды внутри контейнера
+- Python 3.11, GitHub CLI, `pip install` on create
+- Create `.env` and run commands inside the container
 
-## 8. Команды бота
+## 8. Bot commands
 
-| Команда | Описание |
-|---------|----------|
-| `/digest` | Полный дайджест |
-| `/news` | Новости за 24ч |
-| `/weather` | Погода Da Nang |
+| Command | Description |
+|---------|-------------|
+| `/digest` | Full digest |
+| `/news` | News (last 24h) |
+| `/weather` | Da Nang weather |
 | `/rates` | BTC, ETH, VND/USD |
-| `/help` | Справка |
+| `/help` | Help |
 
-Доступ только у `TELEGRAM_USER_ID`.
+Access restricted to `TELEGRAM_USER_ID`.
 
 ## Troubleshooting
 
-| Проблема | Что проверить |
-|----------|----------------|
-| Новости «данные недоступны» | `OPENROUTER_API_KEY` в `.env` / Railway / GitHub |
-| Langfuse не пишет трейсы | ключи, `LANGFUSE_BASE_URL` без кавычек, `flush` после запроса |
-| Бот не отвечает | `TELEGRAM_USER_ID`, polling vs webhook, логи Railway |
-| Пустой cron | secrets в GitHub, лог workflow run |
+| Issue | What to check |
+|-------|---------------|
+| News shows "data unavailable" | `OPENROUTER_API_KEY` in `.env` / Railway |
+| Langfuse not recording traces | keys, `LANGFUSE_BASE_URL` without quotes, `flush` after request |
+| Bot not responding | `TELEGRAM_USER_ID`, polling vs webhook, Railway logs |
+| Empty cron | `CRON_SECRET`, `RAILWAY_PUBLIC_DOMAIN` in GitHub; `TELEGRAM_CHAT_ID`, `CRON_SECRET` on Railway; workflow / Railway logs |
 
-Подробнее про архитектуру новостей — [`AGENTS.md`](AGENTS.md).
+For news architecture details, see [`AGENTS.md`](AGENTS.md).
