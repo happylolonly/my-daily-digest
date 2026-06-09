@@ -1,0 +1,23 @@
+from __future__ import annotations
+
+import os
+
+from digest.content.service import DigestSection, build_digest_html
+from digest.observability import flush_observability
+from digest.telegram.delivery import send_telegram_message
+
+
+def deliver_scheduled_digest() -> None:
+    """Build full digest and send to TELEGRAM_CHAT_ID (cron or local main.py)."""
+    telegram_bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+    telegram_chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+    if not telegram_bot_token or not telegram_chat_id:
+        raise RuntimeError("TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are required.")
+
+    final_html = build_digest_html(DigestSection.FULL)
+    send_telegram_message(
+        chat_id=telegram_chat_id,
+        bot_token=telegram_bot_token,
+        html_text=final_html,
+    )
+    flush_observability()

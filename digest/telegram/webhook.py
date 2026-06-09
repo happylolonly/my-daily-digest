@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import dataclasses
+import hmac
+import logging
 import os
 
 import tornado.web
 from telegram.ext._utils import webhookhandler as ptb_webhook
+
+from digest.scheduled import deliver_scheduled_digest
 
 
 class HealthHandler(tornado.web.RequestHandler):
@@ -17,6 +21,36 @@ class HealthHandler(tornado.web.RequestHandler):
 
     def head(self) -> None:
         self.set_status(200)
+
+
+def _authorize_cron(handler: tornado.web.RequestHandler) -> bool:
+    secret = os.environ.get("CRON_SECRET", "").strip()
+    if not secret:
+        return False
+    auth = handler.request.headers.get("Authorization", "")
+    return hmac.compare_digest(auth, f"Bearer {secret}")
+
+
+class CronDigestHandler(tornado.web.RequestHandler):
+    SUPPORTED_METHODS = ("POST",)
+
+    async def post(self) -> None:
+        if not _authorize_cron(self):
+            self.set_status(401)
+            self.write("unauthorized")
+            return
+
+        loop = tornado.ioloop.IOLoop.current()
+        try:
+            await loop.run_in_executor(None, deliver_scheduled_digest)
+        except Exception:
+            logging.exception("scheduled digest failed")
+            self.set_status(500)
+            self.write("error")
+            return
+
+        self.set_status(200)
+        self.write("ok")
 
 
 class WebhookAppWithHealth(ptb_webhook.WebhookAppClass):
@@ -36,6 +70,7 @@ class WebhookAppWithHealth(ptb_webhook.WebhookAppClass):
         }
         path = webhook_path if webhook_path.startswith("/") else f"/{webhook_path}"
         handlers = [
+            (r"/cron/digest/?", CronDigestHandler),
             (r"/health/?", HealthHandler),
             (r"/?", HealthHandler),
             (rf"{path}/?", ptb_webhook.TelegramHandler, self.shared_objects),
