@@ -90,7 +90,7 @@ async def run_section(
             build_digest_html, section, use_gemini=use_gemini
         )
         await edit_html_message(status, html)
-        if use_gemini and section == DigestSection.FULL:
+        if use_gemini and section in (DigestSection.FULL, DigestSection.NEWS):
             await asyncio.to_thread(flush_observability)
     except Exception:
         logging.exception("command %s failed", section.value)
@@ -123,7 +123,8 @@ async def cmd_rates(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def cmd_news(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await run_section(update, DigestSection.NEWS)
+    gemini_enabled = bool(os.environ.get("GEMINI_API_KEY", "").strip())
+    await run_section(update, DigestSection.NEWS, use_gemini=gemini_enabled)
 
 
 async def on_unauthorized_message(

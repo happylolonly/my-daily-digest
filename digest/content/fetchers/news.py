@@ -11,7 +11,7 @@ import requests
 
 from digest.config import DA_NANG_TZ, HTTP_TIMEOUT_S
 
-MAX_ARTICLES_PER_TOPIC = 3
+MAX_ARTICLES_PER_TOPIC = 10
 NEWS_LOOKBACK_HOURS = 24
 USER_AGENT = "DailyDigestBot/1.0 (+https://github.com/)"
 

@@ -127,10 +127,17 @@ def _format_news_item_line(line: str) -> str:
     return line
 
 
+def _is_preformatted_news_html(text: str) -> bool:
+    return "<a href=" in text or "<b>" in text
+
+
 def _format_news_body(news_text: str | None) -> str:
     text = _safe_or_unavailable(news_text)
     if text == "данные недоступны":
         return text
+
+    if _is_preformatted_news_html(text):
+        return ensure_html_safe(text)
 
     blocks: list[str] = []
     for block in text.split("\n\n"):
