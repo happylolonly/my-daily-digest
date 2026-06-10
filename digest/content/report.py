@@ -229,10 +229,11 @@ def _format_news_item_line(line: str) -> str:
         left, url = line.rsplit(_NEWS_ITEM_SEP, 1)
         url = url.strip()
         if url.startswith("http"):
+            more = f'(<a href="{url}">подробнее</a>)'
             if ". " in left and left[0].isdigit():
                 number, title = left.split(". ", 1)
-                return f"{number}. <a href=\"{url}\">{title}</a>"
-            return f'<a href="{url}">{left}</a>'
+                return f"{number}. {title} {more}"
+            return f"{left} {more}"
 
     return line
 
