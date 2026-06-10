@@ -15,7 +15,7 @@ def fetch_forex_vnd_per_usd() -> str | None:
         )
         r.raise_for_status()
         vnd = r.json()["rates"]["VND"]
-        return f"{vnd:,.0f} VND per USD"
+        return f"{vnd:,.0f}"
     except Exception:
         logging.exception("fetch_forex_vnd_per_usd failed")
         return None

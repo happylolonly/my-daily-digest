@@ -204,13 +204,16 @@ def _format_rates_body(prices_text: str | None, forex_text: str | None) -> str:
     if prices == "данные недоступны":
         lines.append(prices)
     else:
+        crypto_parts: list[str] = []
         for part in prices.split(" ; "):
             part = part.strip()
             if ": " in part:
                 label, value = part.split(": ", 1)
-                lines.append(f"<b>{label}</b>: {value}")
+                crypto_parts.append(f"<b>{label}</b>: {value}")
             elif part:
-                lines.append(part)
+                crypto_parts.append(part)
+        if crypto_parts:
+            lines.append(" · ".join(crypto_parts))
 
     forex_value = _safe_or_unavailable(forex_text)
     lines.append(f"<b>VND/USD</b>: {forex_value}")
