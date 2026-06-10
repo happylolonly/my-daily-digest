@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import random
 
+from digest.content.news.fetch import GroupNews
+from digest.content.news.topics import NewsGroup
 from digest.content.telegram_html import ensure_html_safe
 
 _NEWS_ITEM_SEP = " — "
@@ -192,6 +194,52 @@ def build_news_html(report_date: str, news_text: str | None) -> str:
         _format_news_body(news_text),
     ]
     return ensure_html_safe("\n".join(parts).strip())
+
+
+def build_brief_html(
+    report_date: str,
+    weather_text: str | None,
+    prices_text: str | None,
+    forex_text: str | None,
+) -> str:
+    parts: list[str] = [
+        f"<b>📅 {report_date}</b>",
+        "",
+        "<b>🌤 Погода — Da Nang</b>",
+        _format_weather_body(weather_text),
+        "",
+        "<b>💰 Курсы</b>",
+        _format_rates_body(prices_text, forex_text),
+    ]
+    parts.extend(_motivation_parts())
+    return ensure_html_safe("\n".join(parts).strip())
+
+
+def build_group_news_html(
+    group: NewsGroup,
+    block_texts: list[str],
+    report_date: str,
+) -> str:
+    parts = [
+        f"<b>{group.emoji} {group.title}</b> ({report_date})",
+        "",
+        _format_news_body("\n\n".join(block_texts)),
+    ]
+    return ensure_html_safe("\n".join(parts).strip())
+
+
+def build_news_groups_html_list(
+    report_date: str,
+    grouped: list[GroupNews],
+) -> list[str]:
+    return [
+        build_group_news_html(
+            group_news.group,
+            [block.text for block in group_news.blocks],
+            report_date,
+        )
+        for group_news in grouped
+    ]
 
 
 def build_plain_text_report_html(

@@ -32,17 +32,13 @@ from digest.content.news.fetch import (
     news_model,
 )
 from digest.content.news.parse import payload_to_topic_block
-from digest.content.news.topics import NEWS_TOPICS, NewsTopic
+from digest.content.news.topics import TOPIC_BY_ID, NewsTopic
 from digest.content.openrouter import chat_completion, openrouter_api_key
 from digest.observability import flush_observability, init_observability, langfuse_enabled
 
 T = TypeVar("T")
 
-TOPIC_BY_KEY: dict[str, NewsTopic] = {
-    "ai": NEWS_TOPICS[0],
-    "crypto": NEWS_TOPICS[1],
-    "geo": NEWS_TOPICS[2],
-}
+TOPIC_BY_KEY: dict[str, NewsTopic] = dict(TOPIC_BY_ID)
 
 
 def _report_date(value: str | None) -> str:
@@ -81,9 +77,11 @@ def _run_news_topic(topic_key: str, report_date: str, *, raw: bool) -> int:
             "source": "openrouter-call-script",
             "report_date": report_date,
             "topic": label,
+            "topic_id": topic.id,
+            "group_id": topic.group_id,
             "model": news_model(),
         },
-        tags=["openrouter-news", label, "script"],
+        tags=["openrouter-news", topic.group_id, label, "script"],
         fn=_work,
     )
     if payload is None:
