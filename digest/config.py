@@ -4,10 +4,35 @@ import logging
 import os
 import re
 import sys
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 HTTP_TIMEOUT_S = 10
 DA_NANG_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
+
+_MONTH_GENITIVE_RU: tuple[str, ...] = (
+    "января",
+    "февраля",
+    "марта",
+    "апреля",
+    "мая",
+    "июня",
+    "июля",
+    "августа",
+    "сентября",
+    "октября",
+    "ноября",
+    "декабря",
+)
+
+
+def format_report_date_ru(value: str | datetime) -> str:
+    """Display date for Telegram, e.g. 2026-06-10 -> 10 июня."""
+    if isinstance(value, str):
+        dt = datetime.strptime(value, "%Y-%m-%d")
+    else:
+        dt = value
+    return f"{dt.day} {_MONTH_GENITIVE_RU[dt.month - 1]}"
 
 _TELEGRAM_BOT_URL = re.compile(
     r"(https://api\.telegram\.org/bot)[^/\s\"']+",

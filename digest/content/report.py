@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import random
 
+from digest.config import format_report_date_ru
 from digest.content.news.fetch import GroupNews
 from digest.content.news.topics import NewsGroup
 from digest.content.telegram_html import ensure_html_safe
@@ -166,8 +167,9 @@ def _format_news_body(news_text: str | None) -> str:
 
 
 def build_weather_html(report_date: str, weather_text: str | None) -> str:
+    date_label = format_report_date_ru(report_date)
     parts = [
-        f"<b>🌤 Погода — Da Nang</b> ({report_date})",
+        f"<b>🌤 Погода — Da Nang</b> ({date_label})",
         "",
         _format_weather_body(weather_text),
     ]
@@ -179,8 +181,9 @@ def build_rates_html(
     prices_text: str | None,
     forex_text: str | None,
 ) -> str:
+    date_label = format_report_date_ru(report_date)
     parts = [
-        f"<b>💰 Курсы</b> ({report_date})",
+        f"<b>💰 Курсы</b> ({date_label})",
         "",
         _format_rates_body(prices_text, forex_text),
     ]
@@ -188,8 +191,9 @@ def build_rates_html(
 
 
 def build_news_html(report_date: str, news_text: str | None) -> str:
+    date_label = format_report_date_ru(report_date)
     parts = [
-        f"<b>📰 Новости</b> ({report_date})",
+        f"<b>📰 Новости</b> ({date_label})",
         "",
         _format_news_body(news_text),
     ]
@@ -202,8 +206,9 @@ def build_brief_html(
     prices_text: str | None,
     forex_text: str | None,
 ) -> str:
+    date_label = format_report_date_ru(report_date)
     parts: list[str] = [
-        f"<b>📅 {report_date}</b>",
+        f"<b>📅 {date_label}</b>",
         "",
         "<b>🌤 Погода — Da Nang</b>",
         _format_weather_body(weather_text),
@@ -220,8 +225,9 @@ def build_group_news_html(
     block_texts: list[str],
     report_date: str,
 ) -> str:
+    date_label = format_report_date_ru(report_date)
     parts = [
-        f"<b>{group.emoji} {group.title}</b> ({report_date})",
+        f"<b>{group.emoji} {group.title}</b> ({date_label})",
         "",
         _format_news_body("\n\n".join(block_texts)),
     ]
@@ -251,8 +257,9 @@ def build_plain_text_report_html(
     *,
     include_motivation: bool = True,
 ) -> str:
+    date_label = format_report_date_ru(report_date)
     parts: list[str] = [
-        f"<b>📅 {report_date}</b>",
+        f"<b>📅 {date_label}</b>",
         "",
         "<b>🌤 Погода — Da Nang</b>",
         _format_weather_body(weather_text),
