@@ -45,34 +45,155 @@ def _safe_or_unavailable(text: str | None) -> str:
     return text if text else "данные недоступны"
 
 
+_PERIOD_LABELS_RU: dict[str, str] = {
+    "morning": "Утро",
+    "day": "День",
+    "evening": "Вечер",
+    "night": "Ночь",
+}
+
+_CONDITION_RU: dict[str, str] = {
+    "clear": "ясно",
+    "sunny": "солнечно",
+    "partly cloudy": "переменная облачность",
+    "cloudy": "облачно",
+    "overcast": "пасмурно",
+    "mist": "туман",
+    "fog": "туман",
+    "haze": "дымка",
+    "patchy rain nearby": "местами дождь",
+    "patchy light drizzle": "местами лёгкая морось",
+    "patchy light rain": "местами лёгкий дождь",
+    "patchy light rain with thunder": "местами лёгкий дождь с грозой",
+    "light drizzle": "лёгкая морось",
+    "light rain": "лёгкий дождь",
+    "light rain shower": "лёгкий ливень",
+    "moderate rain": "умеренный дождь",
+    "moderate rain at times": "временами умеренный дождь",
+    "heavy rain": "сильный дождь",
+    "heavy rain at times": "временами сильный дождь",
+    "thundery outbreaks in nearby": "гроза поблизости",
+    "thunderstorm": "гроза",
+    "thunderstorm in vicinity": "гроза поблизости",
+    "rain with thunderstorm": "дождь с грозой",
+    "freezing fog": "изморозь",
+    "blowing snow": "метель",
+    "blizzard": "метель",
+}
+
+_WIND_DIR_RU: dict[str, str] = {
+    "N": "С",
+    "NNE": "ССВ",
+    "NE": "СВ",
+    "ENE": "ВСВ",
+    "E": "В",
+    "ESE": "ВЮВ",
+    "SE": "ЮВ",
+    "SSE": "ЮЮВ",
+    "S": "Ю",
+    "SSW": "ЮЮЗ",
+    "SW": "ЮЗ",
+    "WSW": "ЗЮЗ",
+    "W": "З",
+    "WNW": "ЗСЗ",
+    "NW": "СЗ",
+    "NNW": "ССЗ",
+}
+
+
+def _translate_weather_condition(en: str) -> str:
+    key = en.strip().lower()
+    if not key:
+        return en.strip()
+    if key in _CONDITION_RU:
+        return _CONDITION_RU[key]
+    for pattern, ru in sorted(_CONDITION_RU.items(), key=lambda item: -len(item[0])):
+        if pattern in key:
+            return ru
+    return en.strip()
+
+
+def _translate_weather_conditions(text: str) -> str:
+    return ", ".join(
+        _translate_weather_condition(part) for part in text.split(",") if part.strip()
+    )
+
+
+def _translate_wind_ru(wind: str) -> str:
+    wind = wind.replace(" km/h ", " км/ч ")
+    parts = wind.rsplit(" ", 1)
+    if len(parts) == 2:
+        speed, direction = parts
+        direction_ru = _WIND_DIR_RU.get(direction.strip(), direction.strip())
+        return f"{speed.strip()} {direction_ru}"
+    return wind
+
+
+def _format_weather_today_line(raw: str) -> str:
+    # TODAY: 26–29°C; sunrise 05:15; sunset 18:18
+    payload = raw.removeprefix("TODAY:").strip()
+    parts = [part.strip() for part in payload.split(";") if part.strip()]
+    formatted: list[str] = []
+    for part in parts:
+        if part.startswith("sunrise "):
+            formatted.append(f"восход {part.removeprefix('sunrise ').strip()}")
+        elif part.startswith("sunset "):
+            formatted.append(f"закат {part.removeprefix('sunset ').strip()}")
+        else:
+            formatted.append(part)
+    return " · ".join(formatted)
+
+
+def _format_weather_now_line(raw: str) -> str:
+    # NOW: 30°C; feels 37°C; humidity 79%; Light Rain; wind 9 km/h N
+    payload = raw.removeprefix("NOW:").strip()
+    parts = [part.strip() for part in payload.split(";") if part.strip()]
+    formatted: list[str] = []
+    for part in parts:
+        if part.startswith("feels "):
+            formatted.append(f"ощущ. {part.removeprefix('feels ').strip()}")
+        elif part.startswith("humidity "):
+            formatted.append(f"влажность {part.removeprefix('humidity ').strip()}")
+        elif part.startswith("wind "):
+            wind = _translate_wind_ru(part.removeprefix("wind ").strip())
+            formatted.append(f"ветер {wind}")
+        else:
+            formatted.append(_translate_weather_condition(part))
+    return ", ".join(formatted)
+
+
+def _format_weather_period_line(raw: str) -> str:
+    # PERIOD morning: 27–29°C; rain max 20%; patchy rain nearby
+    period_id, payload = raw.removeprefix("PERIOD ").split(": ", 1)
+    label = _PERIOD_LABELS_RU.get(period_id, period_id)
+    parts = [part.strip() for part in payload.split(";") if part.strip()]
+    formatted: list[str] = []
+    for part in parts:
+        if part.startswith("rain max "):
+            formatted.append(f"дождь до {part.removeprefix('rain max ').strip()}")
+        else:
+            formatted.append(_translate_weather_conditions(part))
+    return f"<b>{label}</b>: " + ", ".join(formatted)
+
+
 def _format_weather_body(weather_text: str | None) -> str:
     text = _safe_or_unavailable(weather_text)
     if text == "данные недоступны":
         return text
 
-    body = text
-    if body.startswith("Da Nang "):
-        body = body[len("Da Nang ") :]
-
     lines: list[str] = []
-    if " Now: " in body:
-        summary, rest = body.split(" Now: ", 1)
-        lines.append(summary.strip().rstrip("."))
-        if " Hourly: " in rest:
-            now_part, hourly = rest.split(" Hourly: ", 1)
-            lines.append(f"<b>Сейчас</b>: {now_part.strip().rstrip('.')}")
-            hourly_slots = [
-                slot.strip()
-                for slot in hourly.strip().rstrip(".").split(";")
-                if slot.strip()
-            ]
-            if hourly_slots:
-                lines.append("<b>По часам</b>:")
-                lines.extend(f"• {slot}" for slot in hourly_slots)
+    for raw_line in text.splitlines():
+        raw_line = raw_line.strip()
+        if not raw_line:
+            continue
+        if raw_line.startswith("TODAY:"):
+            lines.append(_format_weather_today_line(raw_line))
+        elif raw_line.startswith("NOW:"):
+            lines.append(f"<b>Сейчас</b>: {_format_weather_now_line(raw_line)}")
+        elif raw_line.startswith("PERIOD "):
+            lines.append(_format_weather_period_line(raw_line))
         else:
-            lines.append(f"<b>Сейчас</b>: {rest.strip()}")
-    else:
-        lines.append(body)
+            lines.append(raw_line)
 
     return "\n".join(lines)
 
