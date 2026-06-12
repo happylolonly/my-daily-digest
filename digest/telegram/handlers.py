@@ -41,6 +41,8 @@ BOT_COMMANDS = [
 
 UNAUTHORIZED_TEXT = "Это личный бот. Доступ только у владельца."
 
+_news_in_flight = asyncio.Lock()
+
 
 def authorized_user_id() -> str:
     user_id = os.environ.get("TELEGRAM_USER_ID", "").strip()
@@ -182,16 +184,21 @@ async def on_get_news(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await query.answer(UNAUTHORIZED_TEXT, show_alert=True)
         return
 
-    await query.answer()
-    if isinstance(query.message, Message):
-        status = await query.message.reply_text("⏳ Собираю данные...")
-    elif update.effective_chat is not None:
-        status = await context.bot.send_message(
-            update.effective_chat.id, "⏳ Собираю данные..."
-        )
-    else:
+    if _news_in_flight.locked():
+        await query.answer("⏳ Новости уже собираются")
         return
-    await deliver_section(status, DigestSection.NEWS)
+
+    async with _news_in_flight:
+        await query.answer()
+        if isinstance(query.message, Message):
+            status = await query.message.reply_text("⏳ Собираю данные...")
+        elif update.effective_chat is not None:
+            status = await context.bot.send_message(
+                update.effective_chat.id, "⏳ Собираю данные..."
+            )
+        else:
+            return
+        await deliver_section(status, DigestSection.NEWS)
 
 
 async def on_unauthorized_message(
