@@ -11,7 +11,7 @@ from langfuse import propagate_attributes
 from digest.content.news.parse import payload_to_topic_block
 from digest.content.news.prompt import build_topic_prompt
 from digest.content.news.topics import NEWS_GROUPS, NEWS_TOPICS, NewsGroup, NewsTopic
-from digest.content.openrouter import chat_completion, openrouter_api_key
+from digest.content.openrouter import chat_completion, openrouter_api_key, usage_cost
 from digest.observability import langfuse_enabled
 from digest.trace_source import trace_source
 
@@ -71,25 +71,26 @@ def _fetch_topic_payload(topic: NewsTopic, report_date: str) -> dict[str, Any] |
     return _call()
 
 
-def _fetch_topic_block(topic: NewsTopic, report_date: str) -> str | None:
+def _fetch_topic_block(topic: NewsTopic, report_date: str) -> tuple[str | None, float]:
     try:
         with ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(_fetch_topic_payload, topic, report_date)
             payload = future.result(timeout=TOPIC_TIMEOUT_S)
     except FuturesTimeoutError:
         logging.warning("OpenRouter %s timed out after %ss", topic.label.rstrip(":"), TOPIC_TIMEOUT_S)
-        return None
+        return None, 0.0
     except Exception:
         logging.exception("OpenRouter %s failed", topic.label.rstrip(":"))
-        return None
+        return None, 0.0
 
     if payload is None:
-        return None
+        return None, 0.0
 
+    cost = usage_cost(payload) or 0.0
     block = payload_to_topic_block(topic, payload)
     if block is None:
         logging.warning("OpenRouter %s: failed to parse SUMMARY", topic.label.rstrip(":"))
-    return block
+    return block, cost
 
 
 def fetch_all_topic_blocks(report_date: str) -> dict[str, TopicBlock]:
@@ -99,18 +100,27 @@ def fetch_all_topic_blocks(report_date: str) -> dict[str, TopicBlock]:
         return {}
 
     blocks: dict[str, TopicBlock] = {}
+    total_cost = 0.0
 
-    def _fetch_one(topic: NewsTopic) -> tuple[str, TopicBlock | None]:
-        text = _fetch_topic_block(topic, report_date)
+    def _fetch_one(topic: NewsTopic) -> tuple[str, TopicBlock | None, float]:
+        text, cost = _fetch_topic_block(topic, report_date)
         if text is None:
-            return topic.id, None
-        return topic.id, TopicBlock(topic=topic, text=text)
+            return topic.id, None, cost
+        return topic.id, TopicBlock(topic=topic, text=text), cost
 
     with ThreadPoolExecutor(max_workers=len(NEWS_TOPICS)) as executor:
-        for topic_id, block in executor.map(lambda t: _fetch_one(t), NEWS_TOPICS):
+        for topic_id, block, cost in executor.map(lambda t: _fetch_one(t), NEWS_TOPICS):
+            total_cost += cost
             if block is not None:
                 blocks[topic_id] = block
 
+    if total_cost:
+        logging.info(
+            "OpenRouter news total cost: $%.6f (%s/%s topics)",
+            total_cost,
+            len(blocks),
+            len(NEWS_TOPICS),
+        )
     return blocks
 
 

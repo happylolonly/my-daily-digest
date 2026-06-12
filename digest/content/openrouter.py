@@ -36,21 +36,28 @@ def _is_retryable_status(status_code: int) -> bool:
     return status_code in (429, 503)
 
 
-def _log_usage(payload: dict[str, Any], *, label: str) -> None:
+def usage_cost(payload: dict[str, Any]) -> float | None:
+    """Request cost in USD from an OpenRouter response, if reported."""
     usage = payload.get("usage")
     if not isinstance(usage, dict):
-        return
+        return None
 
     cost = usage.get("cost")
     if isinstance(cost, (int, float)):
+        return float(cost)
+    if isinstance(cost, dict) and isinstance(cost.get("total_cost"), (int, float)):
+        return float(cost["total_cost"])
+    return None
+
+
+def _log_usage(payload: dict[str, Any], *, label: str) -> None:
+    cost = usage_cost(payload)
+    if cost is not None:
         logging.info("OpenRouter %s cost: $%.6f", label, cost)
         return
-    if isinstance(cost, dict) and cost.get("total_cost") is not None:
-        logging.info(
-            "OpenRouter %s cost: $%.6f",
-            label,
-            cost.get("total_cost", 0),
-        )
+
+    usage = payload.get("usage")
+    if not isinstance(usage, dict):
         return
 
     logging.info(
