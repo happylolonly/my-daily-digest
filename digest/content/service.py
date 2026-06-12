@@ -21,7 +21,7 @@ from digest.content.report import (
 
 
 class DigestSection(str, Enum):
-    FULL = "full"
+    BRIEF = "brief"
     WEATHER = "weather"
     RATES = "rates"
     NEWS = "news"
@@ -48,18 +48,11 @@ def _fetch_brief_data(report_date: str) -> tuple[str | None, str | None, str | N
         )
 
 
-def _build_full_delivery(report_date: str) -> DigestDelivery:
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        brief_future = executor.submit(_fetch_brief_data, report_date)
-        news_future = executor.submit(fetch_grouped_news, report_date)
-        weather, prices, forex = brief_future.result()
-        grouped = news_future.result()
-
-    messages = [
-        build_brief_html(report_date, weather, prices, forex),
-        *build_news_groups_html_list(report_date, grouped),
-    ]
-    return DigestDelivery(messages=messages)
+def _build_brief_delivery(report_date: str) -> DigestDelivery:
+    weather, prices, forex = _fetch_brief_data(report_date)
+    return DigestDelivery(
+        messages=[build_brief_html(report_date, weather, prices, forex)],
+    )
 
 
 def _build_news_delivery(report_date: str) -> DigestDelivery:
@@ -70,8 +63,8 @@ def _build_news_delivery(report_date: str) -> DigestDelivery:
 def build_digest_delivery(section: DigestSection) -> DigestDelivery:
     report_date = _report_date()
 
-    if section == DigestSection.FULL:
-        return _build_full_delivery(report_date)
+    if section == DigestSection.BRIEF:
+        return _build_brief_delivery(report_date)
 
     if section == DigestSection.NEWS:
         return _build_news_delivery(report_date)
@@ -93,11 +86,3 @@ def build_digest_delivery(section: DigestSection) -> DigestDelivery:
         )
 
     raise ValueError(f"Unknown section: {section}")
-
-
-def build_digest_html(section: DigestSection) -> str:
-    """Single-message HTML for weather/rates; first message only for full/news."""
-    delivery = build_digest_delivery(section)
-    if not delivery.messages:
-        return ""
-    return delivery.messages[0]

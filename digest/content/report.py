@@ -146,16 +146,6 @@ def build_rates_html(
     return ensure_html_safe("\n".join(parts).strip())
 
 
-def build_news_html(report_date: str, news_text: str | None) -> str:
-    date_label = format_report_date_ru(report_date)
-    parts = [
-        f"<b>📰 Новости</b> ({date_label})",
-        "",
-        _format_news_body(news_text),
-    ]
-    return ensure_html_safe("\n".join(parts).strip())
-
-
 def build_brief_html(
     report_date: str,
     weather_text: str | None,
@@ -202,47 +192,3 @@ def build_news_groups_html_list(
         )
         for group_news in grouped
     ]
-
-
-def build_plain_text_report_html(
-    report_date: str,
-    weather_text: str | None,
-    prices_text: str | None,
-    forex_text: str | None,
-    news_text: str | None,
-    *,
-    include_motivation: bool = True,
-) -> str:
-    date_label = format_report_date_ru(report_date)
-    parts: list[str] = [
-        f"<b>📅 {date_label}</b>",
-        "",
-        "<b>🌤 Погода — Da Nang</b>",
-        format_weather_body(weather_text),
-        "",
-        "<b>💰 Курсы</b>",
-        _format_rates_body(prices_text, forex_text),
-        "",
-        "<b>📰 Новости</b>",
-        _format_news_body(news_text),
-    ]
-    if include_motivation:
-        parts.extend(_motivation_parts())
-    return ensure_html_safe("\n".join(parts).strip())
-
-
-def build_full_digest_html(
-    report_date: str,
-    weather_text: str | None,
-    prices_text: str | None,
-    forex_text: str | None,
-    news_text: str | None,
-) -> str:
-    return build_plain_text_report_html(
-        report_date=report_date,
-        weather_text=weather_text,
-        prices_text=prices_text,
-        forex_text=forex_text,
-        news_text=news_text,
-        include_motivation=True,
-    )
