@@ -8,7 +8,9 @@
   },
   "forwardAgent": true,
   "remoteEnv": {
-    "GH_TOKEN": "${localEnv:GH_TOKEN}"
+    "GH_TOKEN": "${localEnv:GH_TOKEN}",
+    // Claude Code's github plugin (MCP) expects the PAT under this name.
+    "GITHUB_PERSONAL_ACCESS_TOKEN": "${localEnv:GH_TOKEN}"
   },
   "initializeCommand": "test -f ${localWorkspaceFolder}/.env.railway || cp ${localWorkspaceFolder}/.env.railway.example ${localWorkspaceFolder}/.env.railway",
   "runArgs": ["--env-file", "${localWorkspaceFolder}/.env.railway"],
