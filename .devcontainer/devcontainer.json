@@ -19,8 +19,10 @@
     "source=daily-digest-pip-cache,target=/home/vscode/.cache/pip,type=volume"
   ],
   "features": {
+    "ghcr.io/devcontainers/features/node:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {},
-    "ghcr.io/stuartleeks/dev-container-features/railway-cli:0": {}
+    "ghcr.io/stuartleeks/dev-container-features/railway-cli:0": {},
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
   },
   "customizations": {
     "vscode": {
