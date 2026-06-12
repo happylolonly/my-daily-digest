@@ -191,10 +191,10 @@ async def on_get_news(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     async with _news_in_flight:
         await query.answer()
         if isinstance(query.message, Message):
-            status = await query.message.reply_text("⏳ Собираю данные...")
+            status = await query.message.reply_text("⏳ Собираю новости...")
         elif update.effective_chat is not None:
             status = await context.bot.send_message(
-                update.effective_chat.id, "⏳ Собираю данные..."
+                update.effective_chat.id, "⏳ Собираю новости..."
             )
         else:
             return
