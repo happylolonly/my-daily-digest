@@ -12,6 +12,14 @@ if [ -d "$PLUGINS_DIR" ]; then
   sudo chown -R vscode:vscode "$PLUGINS_DIR"
 fi
 
+# The claude-code feature installs via npm, but the config expects the native
+# path (~/.local/bin/claude). Symlink so `/doctor` finds it.
+CLAUDE_BIN="$(command -v claude || true)"
+if [ -n "$CLAUDE_BIN" ]; then
+  mkdir -p /home/vscode/.local/bin
+  ln -sf "$CLAUDE_BIN" /home/vscode/.local/bin/claude
+fi
+
 if [ -f requirements.txt ]; then
   pip install --user -r requirements.txt
 fi
