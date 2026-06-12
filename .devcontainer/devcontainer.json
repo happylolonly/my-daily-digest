@@ -43,6 +43,6 @@
       }
     }
   },
-  "postCreateCommand": "bash -c 'if [ -f requirements.txt ]; then pip install --user -r requirements.txt; fi'",
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
   "remoteUser": "vscode"
 }
