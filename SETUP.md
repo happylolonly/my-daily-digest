@@ -36,7 +36,7 @@ cp .env.example .env
 | `LANGFUSE_PUBLIC_KEY` + `LANGFUSE_SECRET_KEY` | [Langfuse Cloud](https://cloud.langfuse.com) — OpenRouter tracing |
 | `LANGFUSE_BASE_URL` | Default: `https://cloud.langfuse.com` (no quotes in value) |
 | `GEMINI_API_KEY` | Reserved; **not used** in hot path (`digest/content/llm.py`) |
-| `RAILWAY_TOKEN` | Local only: Railway CLI (`railway link`, `railway variable set`) |
+| `RAILWAY_TOKEN` | Dev container only: `.env.railway` — Railway CLI (`railway link`, `railway variable set`) |
 | `CRON_SECRET` | Shared secret for `POST /cron/digest` (GitHub Actions + Railway) |
 
 Do not commit `.env` to git.
@@ -141,8 +141,9 @@ The code also strips quotes in `digest/observability.py`.
 
 VS Code / Cursor → **Reopen in Container**.
 
-- Python 3.11, GitHub CLI, `pip install` on create
-- Create `.env` and run commands inside the container
+- Python 3.11, GitHub CLI, Railway CLI, `pip install` on create
+- App secrets: `.env` (read by `load_local_env()` from the mounted workspace)
+- Railway CLI: `cp .env.railway.example .env.railway` — only `RAILWAY_TOKEN` is injected into the container
 
 ## 8. Bot commands
 

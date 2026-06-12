@@ -10,7 +10,8 @@
   "remoteEnv": {
     "GH_TOKEN": "${localEnv:GH_TOKEN}"
   },
-  "runArgs": ["--env-file", "${localWorkspaceFolder}/.env"],
+  "initializeCommand": "test -f ${localWorkspaceFolder}/.env.railway || cp ${localWorkspaceFolder}/.env.railway.example ${localWorkspaceFolder}/.env.railway",
+  "runArgs": ["--env-file", "${localWorkspaceFolder}/.env.railway"],
   "mounts": [
     "source=${localEnv:HOME}/.claude,target=/home/vscode/.claude,type=bind,consistency=cached",
     "source=${localEnv:HOME}/.claude.json,target=/home/vscode/.claude.json,type=bind,consistency=cached",
