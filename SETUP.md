@@ -65,7 +65,7 @@ Without `WEBHOOK_URL` / `WEBHOOK_SECRET`, the bot runs in **polling** mode.
 
 ```bash
 python scripts/openrouter_call.py --topic ai      # one topic
-python scripts/openrouter_call.py --topic all     # all 3 topics
+python scripts/openrouter_call.py --topic all     # all topics (9)
 python scripts/openrouter_call.py --topic ai --raw  # raw API JSON
 ```
 
@@ -122,7 +122,7 @@ If keys are empty, tracing is disabled (`LANGFUSE_TRACING_ENABLED=false`).
 
 News traces:
 
-- `openrouter-news` — per-topic requests (AI / Crypto / Geopolitics)
+- `openrouter-news` — per-topic requests (9 topics in 3 groups)
 - `openrouter-chat` — low-level API call
 
 Common mistake: extra quotes in `.env`:

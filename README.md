@@ -1,6 +1,6 @@
 # Daily Digest Bot
 
-Personal morning briefing in Telegram: weather, crypto/forex rates, and news (AI, crypto, geopolitics).
+Personal morning briefing in Telegram: weather, crypto/forex rates, and news (9 topics across tech, world, politics).
 
 Stateless — no database, each run is independent.
 
@@ -8,7 +8,7 @@ Stateless — no database, each run is independent.
 
 - **Weather** — Da Nang (wttr.in)
 - **Rates** — BTC, ETH (CoinGecko), VND/USD (forex API)
-- **News** — 3 topics via [OpenRouter](https://openrouter.ai) (`perplexity/sonar`): Russian summary + links; search in English
+- **News** — 9 topics in 3 groups (tech, world, politics) via [OpenRouter](https://openrouter.ai) (`perplexity/sonar`): Russian summary + links; search in English
 
 Full digest HTML is assembled in code (`report.py`) — no LLM for weather/rates layout.
 
@@ -34,23 +34,15 @@ python bot.py          # bot (polling locally)
 
 ## Project layout
 
-```
-main.py              # local: full digest → Telegram
-digest/scheduled.py  # deliver_scheduled_digest() — cron + main.py
-bot.py               # bot entry: /digest, /news, …
-digest/
-  content/
-    service.py       # build sections
-    report.py        # Telegram HTML
-    openrouter.py    # OpenRouter client
-    news/            # news topics, prompt, parse, fetch
-    fetchers/        # weather, crypto, forex, RSS (RSS unused in hot path)
-    llm.py           # Gemini (reserved, not used in hot path)
-  telegram/          # bot, webhook, delivery
-scripts/
-  openrouter_call.py # debug OpenRouter + Langfuse
-.github/workflows/   # daily cron → Railway
-```
+Top level:
+
+- `main.py` — local: full digest → Telegram
+- `bot.py` — Telegram bot (`/brief`, `/news`, …)
+- `digest/` — content fetchers, news pipeline, Telegram delivery
+- `scripts/` — dev/debug helpers
+- `.github/workflows/` — daily cron → Railway
+
+Full annotated tree — see **[AGENTS.md](AGENTS.md)** (canonical source for project structure).
 
 ## Modes
 
