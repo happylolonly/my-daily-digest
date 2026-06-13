@@ -109,6 +109,10 @@ RSS (`fetchers/news.py`) и Gemini (`llm.py`) в репозитории, но **
 - **Type hints** на публичных функциях
 - **stdlib first** — не тащить лишние зависимости (OpenRouter через `requests`, не SDK)
 
+## Тесты
+
+Конвенции и запуск — см. [`TESTING.md`](TESTING.md). Кратко: `pytest`, тесты в `tests/`, dev-зависимости в `requirements-dev.txt` (не в прод).
+
 ## Правила кода
 
 1. **Graceful degradation** — каждый fetch в своём `try/except`; падение одной темы новостей не роняет остальные
@@ -149,5 +153,5 @@ RSS (`fetchers/news.py`) и Gemini (`llm.py`) в репозитории, но **
 - БД, Redis, очереди
 - NewsAPI без явного запроса
 - Over-engineering: DI, фабрики для fetchers
-- Тесты и доки сверх запроса пользователя
+- Доки сверх запроса пользователя
 - Крупный рефакторинг без согласования
