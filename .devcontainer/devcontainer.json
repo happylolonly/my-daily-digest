@@ -4,9 +4,10 @@
   "containerEnv": {
     "TZ": "Asia/Ho_Chi_Minh",
     "PIP_CACHE_DIR": "/home/vscode/.cache/pip",
-    "PIP_DISABLE_PIP_VERSION_CHECK": "1"
+    "PIP_DISABLE_PIP_VERSION_CHECK": "1",
+    // Docker Desktop exposes the host ssh-agent at this fixed socket path.
+    "SSH_AUTH_SOCK": "/ssh-agent"
   },
-  "forwardAgent": true,
   "remoteEnv": {
     "GH_TOKEN": "${localEnv:GH_TOKEN}",
     // Claude Code's github plugin (MCP) expects the PAT under this name.
@@ -15,6 +16,7 @@
   "initializeCommand": "test -f ${localWorkspaceFolder}/.env.railway || cp ${localWorkspaceFolder}/.env.railway.example ${localWorkspaceFolder}/.env.railway",
   "runArgs": ["--env-file", "${localWorkspaceFolder}/.env.railway"],
   "mounts": [
+    "source=/run/host-services/ssh-auth.sock,target=/ssh-agent,type=bind",
     "source=${localEnv:HOME}/.claude,target=/home/vscode/.claude,type=bind,consistency=cached",
     "source=${localEnv:HOME}/.claude.json,target=/home/vscode/.claude.json,type=bind,consistency=cached",
     "source=daily-digest-claude-plugins,target=/home/vscode/.claude/plugins,type=volume",
