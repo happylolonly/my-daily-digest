@@ -33,6 +33,8 @@ cp .env.example .env
 | `OPENROUTER_NEWS_MODEL` | News model (default: `perplexity/sonar`) |
 | `OPENROUTER_HTTP_REFERER` | Referer for OpenRouter (rankings on openrouter.ai) |
 | `OPENROUTER_APP_TITLE` | App title in OpenRouter (default: `Daily Digest Bot`) |
+| `LOG_LEVEL` | Logging level (default: `INFO`) |
+| `WEBHOOK_PATH` | Telegram webhook path (default: `telegram`) |
 | `LANGFUSE_PUBLIC_KEY` + `LANGFUSE_SECRET_KEY` | [Langfuse Cloud](https://cloud.langfuse.com) — OpenRouter tracing |
 | `LANGFUSE_BASE_URL` | Default: `https://cloud.langfuse.com` (no quotes in value) |
 | `GEMINI_API_KEY` | Reserved; **not used** in hot path (`digest/content/llm.py`) |
