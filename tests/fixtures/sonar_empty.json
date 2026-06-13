@@ -1,0 +1,15 @@
+{
+  "id": "gen-fixture-empty",
+  "model": "perplexity/sonar",
+  "choices": [
+    {
+      "message": {
+        "role": "assistant",
+        "content": "К сожалению, по этой теме за сегодня значимых новостей не найдено."
+      }
+    }
+  ],
+  "citations": [],
+  "search_results": [],
+  "usage": {"prompt_tokens": 90, "completion_tokens": 15, "total_tokens": 105, "cost": 0.0003}
+}

@@ -1,0 +1,3 @@
+# Dev-only dependencies (not installed on Railway; see requirements.txt for prod)
+-r requirements.txt
+pytest>=8.0.0
