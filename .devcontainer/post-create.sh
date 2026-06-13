@@ -20,6 +20,19 @@ if [ -n "$CLAUDE_BIN" ]; then
   ln -sf "$CLAUDE_BIN" /home/vscode/.local/bin/claude
 fi
 
+# Keep ~/.claude.json inside the bind-mounted ~/.claude dir. A separate bind
+# mount for ~/.claude.json truncates writes on Docker Desktop (consistency=cached).
+CLAUDE_CONFIG="/home/vscode/.claude/.claude.json"
+if [ ! -f "$CLAUDE_CONFIG" ]; then
+  LATEST_BACKUP="$(ls -1t /home/vscode/.claude/backups/.claude.json.backup.* 2>/dev/null | head -1 || true)"
+  if [ -n "$LATEST_BACKUP" ]; then
+    cp "$LATEST_BACKUP" "$CLAUDE_CONFIG"
+  else
+    echo '{}' > "$CLAUDE_CONFIG"
+  fi
+fi
+ln -sfn "$CLAUDE_CONFIG" /home/vscode/.claude.json
+
 if [ -f requirements.txt ]; then
   pip install --user -r requirements.txt
 fi
