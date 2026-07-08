@@ -153,16 +153,19 @@ def build_brief_html(
     forex_text: str | None,
 ) -> str:
     date_label = format_report_date_ru(report_date)
-    parts: list[str] = [
-        f"<b>📅 {date_label}</b>",
-        "",
-        "<b>🌤 Погода — Da Nang</b>",
-        format_weather_body(weather_text),
-        "",
-        "<b>💰 Курсы</b>",
-        _format_rates_body(prices_text, forex_text),
-    ]
+    parts: list[str] = [f"<b>📅 {date_label}</b>"]
     parts.extend(_motivation_parts())
+    parts.extend(
+        [
+            "",
+            "<b>🌤 Погода — Da Nang</b>",
+            "",
+            format_weather_body(weather_text),
+            "",
+            "<b>💰 Курсы</b>",
+            _format_rates_body(prices_text, forex_text),
+        ]
+    )
     return ensure_html_safe("\n".join(parts).strip())
 
 
