@@ -11,7 +11,8 @@
   "remoteEnv": {
     "GH_TOKEN": "${localEnv:GH_TOKEN}",
     // Claude Code's github plugin (MCP) expects the PAT under this name.
-    "GITHUB_PERSONAL_ACCESS_TOKEN": "${localEnv:GH_TOKEN}"
+    "GITHUB_PERSONAL_ACCESS_TOKEN": "${localEnv:GH_TOKEN}",
+    "PATH": "/home/vscode/.railway/bin:/home/vscode/.local/bin:${containerEnv:PATH}"
   },
   "initializeCommand": "test -f ${localWorkspaceFolder}/.env.railway || cp ${localWorkspaceFolder}/.env.railway.example ${localWorkspaceFolder}/.env.railway",
   "runArgs": ["--env-file", "${localWorkspaceFolder}/.env.railway"],
@@ -19,12 +20,12 @@
     "source=/run/host-services/ssh-auth.sock,target=/ssh-agent,type=bind",
     "source=${localEnv:HOME}/.claude,target=/home/vscode/.claude,type=bind,consistency=delegated",
     "source=daily-digest-claude-plugins,target=/home/vscode/.claude/plugins,type=volume",
-    "source=daily-digest-pip-cache,target=/home/vscode/.cache/pip,type=volume"
+    "source=daily-digest-pip-cache,target=/home/vscode/.cache/pip,type=volume",
+    "source=daily-digest-railway-config,target=/home/vscode/.railway,type=volume"
   ],
   "features": {
     "ghcr.io/devcontainers/features/node:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {},
-    "ghcr.io/stuartleeks/dev-container-features/railway-cli:0": {},
     "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
   },
   "customizations": {

@@ -33,6 +33,18 @@ if [ ! -f "$CLAUDE_CONFIG" ]; then
 fi
 ln -sfn "$CLAUDE_CONFIG" /home/vscode/.claude.json
 
+# Named volumes are created owned by root; railway link writes here as vscode.
+RAILWAY_DIR="/home/vscode/.railway"
+if [ -d "$RAILWAY_DIR" ]; then
+  sudo chown -R vscode:vscode "$RAILWAY_DIR"
+fi
+
+# Railway CLI (installs to ~/.railway/bin, persisted via volume). Piped to bash,
+# not sh — the script uses bash syntax. npm install fails on arm64 (no gnu build).
+if ! command -v railway >/dev/null 2>&1; then
+  curl -fsSL https://railway.com/install.sh | bash -s -- -y
+fi
+
 if [ -f requirements.txt ]; then
   pip install --user -r requirements.txt
 fi
