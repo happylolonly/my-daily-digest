@@ -45,6 +45,7 @@ if ! command -v railway >/dev/null 2>&1; then
   curl -fsSL https://railway.com/install.sh | bash -s -- -y
 fi
 
-if [ -f requirements.txt ]; then
-  pip install --user -r requirements.txt
+# Dev deps include prod ones (requirements-dev.txt starts with -r requirements.txt).
+if [ -f requirements-dev.txt ]; then
+  pip install --user -r requirements-dev.txt
 fi
