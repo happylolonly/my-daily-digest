@@ -194,6 +194,7 @@ def format_weather_body(weather_text: str | None) -> str:
         return "данные недоступны"
 
     lines: list[str] = []
+    periods_started = False
     for raw_line in weather_text.splitlines():
         raw_line = raw_line.strip()
         if not raw_line:
@@ -203,6 +204,11 @@ def format_weather_body(weather_text: str | None) -> str:
         elif raw_line.startswith("NOW:"):
             lines.append(_format_now_line(raw_line))
         elif raw_line.startswith("PERIOD "):
+            # Blank line separates the per-period block from the summary lines.
+            if not periods_started:
+                periods_started = True
+                if lines:
+                    lines.append("")
             lines.append(_format_period_line(raw_line))
         else:
             lines.append(raw_line)
