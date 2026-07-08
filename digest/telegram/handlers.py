@@ -4,11 +4,10 @@ import asyncio
 import logging
 import os
 
-from telegram import BotCommand, InlineKeyboardMarkup, Message, Update
+from telegram import BotCommand, Message, Update
 from telegram.constants import ParseMode
 from telegram.ext import (
     Application,
-    CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
     MessageHandler,
@@ -18,12 +17,11 @@ from telegram.ext import (
 from digest.content.telegram_html import html_to_plain_text
 from digest.content.service import DigestSection, build_digest_delivery
 from digest.observability import flush_observability
-from digest.telegram.delivery import NEWS_CALLBACK_DATA, news_button_markup
 
 HELP_TEXT = (
     "<b>Daily Digest Bot</b>\n\n"
     "Команды:\n"
-    "/brief — дата, погода, курсы, мотивация + кнопка новостей\n"
+    "/brief — дата, погода, курсы, мотивация\n"
     "/weather — погода в Da Nang\n"
     "/rates — курсы BTC, ETH и VND/USD\n"
     "/news — новости за 24 часа (3 сообщения по группам)\n"
@@ -40,8 +38,6 @@ BOT_COMMANDS = [
 ]
 
 UNAUTHORIZED_TEXT = "Это личный бот. Доступ только у владельца."
-
-_news_in_flight = asyncio.Lock()
 
 
 def authorized_user_id() -> str:
@@ -64,17 +60,12 @@ async def reply_unauthorized(update: Update) -> None:
         await update.message.reply_text(UNAUTHORIZED_TEXT)
 
 
-async def edit_html_message(
-    message: Message,
-    html_text: str,
-    reply_markup: InlineKeyboardMarkup | None = None,
-) -> None:
+async def edit_html_message(message: Message, html_text: str) -> None:
     try:
         await message.edit_text(
             html_text,
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True,
-            reply_markup=reply_markup,
         )
     except Exception:
         logging.exception(
@@ -83,7 +74,6 @@ async def edit_html_message(
         await message.edit_text(
             html_to_plain_text(html_text),
             disable_web_page_preview=True,
-            reply_markup=reply_markup,
         )
 
 
@@ -110,12 +100,7 @@ async def _deliver_messages(status: Message, messages: list[str]) -> None:
         await send_html_reply(status, html_text)
 
 
-async def deliver_section(
-    status: Message,
-    section: DigestSection,
-    *,
-    reply_markup: InlineKeyboardMarkup | None = None,
-) -> None:
+async def deliver_section(status: Message, section: DigestSection) -> None:
     try:
         delivery = await asyncio.to_thread(build_digest_delivery, section)
         if section == DigestSection.NEWS:
@@ -124,18 +109,13 @@ async def deliver_section(
         elif not delivery.messages:
             await status.edit_text("Данные недоступны.")
         else:
-            await edit_html_message(status, delivery.messages[0], reply_markup)
+            await edit_html_message(status, delivery.messages[0])
     except Exception:
         logging.exception("section %s failed", section.value)
         await status.edit_text("Ошибка при сборе данных.")
 
 
-async def run_section(
-    update: Update,
-    section: DigestSection,
-    *,
-    reply_markup: InlineKeyboardMarkup | None = None,
-) -> None:
+async def run_section(update: Update, section: DigestSection) -> None:
     if update.message is None:
         return
 
@@ -144,7 +124,7 @@ async def run_section(
         return
 
     status = await update.message.reply_text("⏳ Собираю данные...")
-    await deliver_section(status, section, reply_markup=reply_markup)
+    await deliver_section(status, section)
 
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -160,7 +140,7 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def cmd_brief(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await run_section(update, DigestSection.BRIEF, reply_markup=news_button_markup())
+    await run_section(update, DigestSection.BRIEF)
 
 
 async def cmd_weather(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -173,32 +153,6 @@ async def cmd_rates(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def cmd_news(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await run_section(update, DigestSection.NEWS)
-
-
-async def on_get_news(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    if query is None:
-        return
-
-    if not is_authorized(update):
-        await query.answer(UNAUTHORIZED_TEXT, show_alert=True)
-        return
-
-    if _news_in_flight.locked():
-        await query.answer("⏳ Новости уже собираются")
-        return
-
-    async with _news_in_flight:
-        await query.answer()
-        if isinstance(query.message, Message):
-            status = await query.message.reply_text("⏳ Собираю новости...")
-        elif update.effective_chat is not None:
-            status = await context.bot.send_message(
-                update.effective_chat.id, "⏳ Собираю новости..."
-            )
-        else:
-            return
-        await deliver_section(status, DigestSection.NEWS)
 
 
 async def on_unauthorized_message(
@@ -220,9 +174,6 @@ def register_handlers(application: Application) -> None:
     application.add_handler(CommandHandler("weather", cmd_weather))
     application.add_handler(CommandHandler("rates", cmd_rates))
     application.add_handler(CommandHandler("news", cmd_news))
-    application.add_handler(
-        CallbackQueryHandler(on_get_news, pattern=f"^{NEWS_CALLBACK_DATA}$")
-    )
     application.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, on_unauthorized_message)
     )

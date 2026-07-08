@@ -22,7 +22,7 @@ cp .env.example .env
 
 | Variable | Description |
 |----------|-------------|
-| `TELEGRAM_USER_ID` | Who can run commands (`/brief`, `/news`, …) and press the news button. Fallback: `TELEGRAM_CHAT_ID` |
+| `TELEGRAM_USER_ID` | Who can run commands (`/brief`, `/news`, …). Fallback: `TELEGRAM_CHAT_ID` |
 | `WEBHOOK_URL` + `WEBHOOK_SECRET` | Railway prod (webhook). Leave unset locally → polling |
 | `RAILWAY_PUBLIC_DOMAIN` | Alternative to `WEBHOOK_URL` (set automatically on Railway) |
 
@@ -151,8 +151,8 @@ VS Code / Cursor → **Reopen in Container**.
 
 | Command | Description |
 |---------|-------------|
-| `/brief` | Date, weather, rates, motivation + "get news" button |
-| `/news` | News (last 24h), same as pressing the button |
+| `/brief` | Date, weather, rates, motivation |
+| `/news` | News (last 24h), 3 messages by group |
 | `/weather` | Da Nang weather |
 | `/rates` | BTC, ETH, VND/USD |
 | `/help` | Help |
