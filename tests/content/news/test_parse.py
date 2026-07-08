@@ -11,6 +11,7 @@ import re
 
 from digest.content.news.parse import (
     MAX_TOPIC_LINKS,
+    NO_NEWS_TEXT,
     ParsedLink,
     SearchResultEntry,
     clean_summary_text,
@@ -205,3 +206,27 @@ def test_payload_to_topic_block_returns_none_when_no_summary(
 ) -> None:
     payload = load_fixture("sonar_empty.json")
     assert payload_to_topic_block(make_topic(), payload) is None
+
+
+def test_payload_to_topic_block_no_news_marker_renders_short_text(make_topic) -> None:
+    # Citations present, but the NO_NEWS marker must suppress fallback links.
+    payload = {
+        "choices": [{"message": {"content": "SUMMARY: NO_NEWS"}}],
+        "citations": ["https://example.com/article"],
+    }
+    block = payload_to_topic_block(make_topic(), payload)
+
+    assert block is not None
+    assert block.startswith("ИИ:")
+    assert NO_NEWS_TEXT in block
+    assert not _URL_RE.findall(block)
+
+
+def test_payload_to_topic_block_no_news_marker_tolerates_trailing_punctuation(
+    make_topic,
+) -> None:
+    payload = {"choices": [{"message": {"content": "SUMMARY: no_news."}}]}
+    block = payload_to_topic_block(make_topic(), payload)
+
+    assert block is not None
+    assert NO_NEWS_TEXT in block

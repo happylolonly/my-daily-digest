@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from digest.content.news.parse import MAX_TOPIC_LINKS
+from digest.content.news.parse import MAX_TOPIC_LINKS, NO_NEWS_MARKER
 from digest.content.news.topics import NewsTopic
 
 
@@ -19,5 +19,7 @@ def build_topic_prompt(topic: NewsTopic, report_date: str) -> str:
         f"- Exactly 1 SUMMARY line and 1 to {MAX_TOPIC_LINKS} LINK lines\n"
         "- Links only in LINK lines, never in SUMMARY\n"
         "- URLs only from sources found in search\n"
-        "- No intro phrases or text outside this format"
+        "- No intro phrases or text outside this format\n"
+        "- If search found no relevant news for the last 24 hours, respond with "
+        f"exactly one line: SUMMARY: {NO_NEWS_MARKER} (no LINK lines, no explanations)"
     )

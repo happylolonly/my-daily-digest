@@ -13,6 +13,10 @@ _CITATION_MARKER_RE = re.compile(r"\[\d+\]")
 MAX_TOPIC_LINKS = 4
 _NEWS_ITEM_SEP = " — "
 
+# Sentinel the model returns when search found nothing for the topic (see prompt.py).
+NO_NEWS_MARKER = "NO_NEWS"
+NO_NEWS_TEXT = "За 24 часа новостей нет."
+
 
 @dataclass
 class ParsedLink:
@@ -215,6 +219,11 @@ def payload_to_topic_block(topic: NewsTopic, payload: dict[str, Any]) -> str | N
     parsed = parse_topic_content(content)
     if parsed is None:
         return None
+
+    if parsed.summary.upper().startswith(NO_NEWS_MARKER):
+        return format_topic_block(
+            topic, TopicParseResult(summary=NO_NEWS_TEXT, links=[])
+        )
 
     allowed_urls = extract_citation_urls(payload)
     search_results = extract_search_results(payload)
