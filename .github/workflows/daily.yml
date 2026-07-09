@@ -2,10 +2,10 @@ name: Daily Digest
 
 on:
   schedule:
-    # 0 1 * * * UTC = 8:00 Da Nang (UTC+7)
-    - cron: "0 1 * * *"
-    # 0 11 * * * UTC = 18:00 Da Nang (UTC+7)
-    - cron: "0 11 * * *"
+    # UTC → Da Nang (UTC+7). Non-zero minutes avoid GitHub Actions queue peak at :00.
+    # 17 0 * * * = 07:17, 23 11 * * * = 18:23
+    - cron: "17 0 * * *"
+    - cron: "23 11 * * *"
   workflow_dispatch:
 
 jobs:
