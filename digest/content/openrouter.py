@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import time
+from dataclasses import dataclass
 from typing import Any
 
 import requests
@@ -12,6 +13,18 @@ OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_TIMEOUT_S = 30
 OPENROUTER_RETRY_ATTEMPTS = 3
 OPENROUTER_RETRY_DELAY_S = 15
+
+
+@dataclass(frozen=True)
+class ChatCompletionOutcome:
+    """Result of an OpenRouter chat call; payload is set on success."""
+
+    payload: dict[str, Any] | None = None
+    reason: str | None = None
+
+    @property
+    def ok(self) -> bool:
+        return self.payload is not None
 
 
 def openrouter_api_key() -> str:
@@ -77,11 +90,11 @@ def chat_completion(
     extra: dict[str, Any] | None = None,
     timeout_s: int = OPENROUTER_TIMEOUT_S,
     label: str = "chat",
-) -> dict[str, Any] | None:
-    """POST /chat/completions; returns raw JSON or None on failure."""
+) -> ChatCompletionOutcome:
+    """POST /chat/completions; returns payload on success or a short failure reason."""
     if not openrouter_api_key():
         logging.warning("OPENROUTER_API_KEY not set")
-        return None
+        return ChatCompletionOutcome(reason="no key")
 
     body: dict[str, Any] = {
         "model": model,
@@ -92,6 +105,7 @@ def chat_completion(
 
     get_client().update_current_generation(model=model, input=messages)
 
+    last_reason = "error"
     for attempt in range(1, OPENROUTER_RETRY_ATTEMPTS + 1):
         try:
             response = requests.post(
@@ -101,6 +115,7 @@ def chat_completion(
                 timeout=timeout_s,
             )
             if not response.ok:
+                last_reason = f"HTTP {response.status_code}"
                 if _is_retryable_status(response.status_code) and attempt < OPENROUTER_RETRY_ATTEMPTS:
                     logging.warning(
                         "OpenRouter %s HTTP %s, retry in %ss (%s/%s)",
@@ -118,7 +133,7 @@ def chat_completion(
                     response.status_code,
                     response.text[:200],
                 )
-                return None
+                return ChatCompletionOutcome(reason=last_reason)
 
             payload = response.json()
             _log_usage(payload, label=label)
@@ -126,12 +141,12 @@ def chat_completion(
             choices = payload.get("choices") or []
             if not choices:
                 logging.warning("OpenRouter %s returned no choices", label)
-                return None
+                return ChatCompletionOutcome(reason="empty")
 
             content = ((choices[0].get("message") or {}).get("content") or "").strip()
             if not content:
                 logging.warning("OpenRouter %s returned empty content", label)
-                return None
+                return ChatCompletionOutcome(reason="empty")
 
             usage = payload.get("usage") or {}
             get_client().update_current_generation(
@@ -142,11 +157,25 @@ def chat_completion(
                     "total": usage.get("total_tokens") or 0,
                 },
             )
-            return payload
+            return ChatCompletionOutcome(payload=payload)
+        except requests.Timeout:
+            last_reason = "timeout"
+            if attempt >= OPENROUTER_RETRY_ATTEMPTS:
+                logging.exception("OpenRouter %s timed out", label)
+                return ChatCompletionOutcome(reason=last_reason)
+            logging.warning(
+                "OpenRouter %s timeout, retry in %ss (%s/%s)",
+                label,
+                OPENROUTER_RETRY_DELAY_S,
+                attempt,
+                OPENROUTER_RETRY_ATTEMPTS,
+            )
+            time.sleep(OPENROUTER_RETRY_DELAY_S)
         except requests.RequestException:
+            last_reason = "error"
             if attempt >= OPENROUTER_RETRY_ATTEMPTS:
                 logging.exception("OpenRouter %s request failed", label)
-                return None
+                return ChatCompletionOutcome(reason=last_reason)
             logging.warning(
                 "OpenRouter %s request error, retry in %ss (%s/%s)",
                 label,
@@ -156,4 +185,4 @@ def chat_completion(
             )
             time.sleep(OPENROUTER_RETRY_DELAY_S)
 
-    return None
+    return ChatCompletionOutcome(reason=last_reason)

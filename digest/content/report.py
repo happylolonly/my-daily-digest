@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 
 from digest.config import format_report_date_ru
-from digest.content.news.fetch import GroupNews
+from digest.content.news.fetch import GroupNews, TopicFailure
 from digest.content.news.topics import NewsGroup
 from digest.content.telegram_html import ensure_html_safe
 from digest.content.weather import format_weather_body
@@ -169,17 +169,47 @@ def build_brief_html(
     return ensure_html_safe("\n".join(parts).strip())
 
 
+def _format_unavailable_detail(reason: str) -> str:
+    if reason.startswith("HTTP"):
+        return f"OpenRouter {reason}"
+    return reason
+
+
+def build_news_unavailable_html(report_date: str, reason: str) -> str:
+    date_label = format_report_date_ru(report_date)
+    detail = _format_unavailable_detail(reason)
+    parts = [
+        f"<b>📰 Новости недоступны</b> ({date_label})",
+        "",
+        f"({detail})",
+    ]
+    return ensure_html_safe("\n".join(parts).strip())
+
+
+def _format_failures_footer(failures: list[TopicFailure]) -> str:
+    parts: list[str] = []
+    for failure in failures:
+        label = failure.topic.label.rstrip(":")
+        parts.append(f"{label} ({failure.reason})")
+    return "не загрузилось: " + ", ".join(parts)
+
+
 def build_group_news_html(
     group: NewsGroup,
     block_texts: list[str],
     report_date: str,
+    failures: list[TopicFailure] | None = None,
 ) -> str:
     date_label = format_report_date_ru(report_date)
-    parts = [
-        f"<b>{group.emoji} {group.title}</b> ({date_label})",
-        "",
-        _format_news_body("\n\n".join(block_texts)),
-    ]
+    parts = [f"<b>{group.emoji} {group.title}</b> ({date_label})", ""]
+    if block_texts:
+        parts.append(_format_news_body("\n\n".join(block_texts)))
+    if failures:
+        if block_texts:
+            parts.append("")
+        parts.append(_format_failures_footer(failures))
+    elif not block_texts:
+        parts.append(_format_news_body(None))
     return ensure_html_safe("\n".join(parts).strip())
 
 
@@ -192,6 +222,7 @@ def build_news_groups_html_list(
             group_news.group,
             [block.text for block in group_news.blocks],
             report_date,
+            failures=group_news.failures,
         )
         for group_news in grouped
     ]

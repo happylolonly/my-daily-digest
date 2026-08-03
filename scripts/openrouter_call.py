@@ -123,7 +123,7 @@ def _run_news_all(report_date: str) -> int:
 
 
 def _run_raw_prompt(prompt: str, model: str, *, raw: bool) -> int:
-    def _work() -> dict[str, Any] | None:
+    def _work():
         return chat_completion(
             model=model,
             messages=[{"role": "user", "content": prompt}],
@@ -131,16 +131,17 @@ def _run_raw_prompt(prompt: str, model: str, *, raw: bool) -> int:
             label="script",
         )
 
-    payload = _with_langfuse_trace(
+    outcome = _with_langfuse_trace(
         trace_name="openrouter-cli",
         metadata={"source": "openrouter-call-script", "model": model},
         tags=["openrouter-cli", "script"],
         fn=_work,
     )
-    if payload is None:
-        print("Request failed.", file=sys.stderr)
+    if not outcome.ok or outcome.payload is None:
+        print(f"Request failed ({outcome.reason or 'error'}).", file=sys.stderr)
         return 1
 
+    payload = outcome.payload
     if raw:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 0
