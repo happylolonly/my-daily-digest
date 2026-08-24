@@ -15,6 +15,7 @@ from digest.content.news import fetch_grouped_news
 from digest.content.report import (
     build_brief_html,
     build_news_groups_html_list,
+    build_news_unavailable_html,
     build_rates_html,
     build_weather_html,
 )
@@ -56,8 +57,16 @@ def _build_brief_delivery(report_date: str) -> DigestDelivery:
 
 
 def _build_news_delivery(report_date: str) -> DigestDelivery:
-    grouped = fetch_grouped_news(report_date)
-    return DigestDelivery(messages=build_news_groups_html_list(report_date, grouped))
+    result = fetch_grouped_news(report_date)
+    if result.unavailable_reason is not None:
+        return DigestDelivery(
+            messages=[
+                build_news_unavailable_html(report_date, result.unavailable_reason)
+            ],
+        )
+    return DigestDelivery(
+        messages=build_news_groups_html_list(report_date, result.groups),
+    )
 
 
 def build_digest_delivery(section: DigestSection) -> DigestDelivery:
