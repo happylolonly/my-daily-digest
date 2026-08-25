@@ -2,10 +2,10 @@ name: Daily Digest
 
 on:
   schedule:
-    # UTC → Da Nang (UTC+7). Non-zero minutes avoid GitHub Actions queue peak at :00.
-    # 17 0 * * * = 07:17 (brief + news), 23 11 * * * = 18:23 (brief only)
-    - cron: "17 0 * * *"
-    - cron: "23 11 * * *"
+    # UTC → Da Nang (UTC+7).
+    # 0 0 * * * = 07:00 (brief + news), 0 11 * * * = 18:00 (brief only)
+    - cron: "0 0 * * *"
+    - cron: "0 11 * * *"
   workflow_dispatch:
 
 jobs:
@@ -22,7 +22,7 @@ jobs:
             exit 1
           fi
           digest_url="https://${RAILWAY_PUBLIC_DOMAIN}/cron/digest"
-          if [[ "${{ github.event.schedule }}" == "23 11 * * *" ]]; then
+          if [[ "${{ github.event.schedule }}" == "0 11 * * *" ]]; then
             digest_url="${digest_url}?news=0"
           fi
           curl -fsS --max-time 180 \

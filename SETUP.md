@@ -95,8 +95,8 @@ Full Railway variable list: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_
 
 Workflow: [`.github/workflows/daily.yml`](.github/workflows/daily.yml)
 
-- **07:17 Da Nang** (UTC+7) — brief + news
-- **18:23 Da Nang** (UTC+7) — brief only (`POST /cron/digest?news=0`)
+- **07:00 Da Nang** (UTC+7) — brief + news
+- **18:00 Da Nang** (UTC+7) — brief only (`POST /cron/digest?news=0`)
 - Manual run: **Actions → Daily Digest → Run workflow**
 
 Repository secrets:
