@@ -1,0 +1,10 @@
+---
+description: Commit on the current branch; do not auto-create feature branches
+alwaysApply: true
+---
+
+# Git workflow
+
+When committing or opening a PR, stay on the current branch (including `main`).
+
+Do not create a feature branch unless the user explicitly asks for one.
