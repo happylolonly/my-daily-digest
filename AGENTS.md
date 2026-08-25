@@ -4,11 +4,11 @@
 
 **Daily Digest Bot** — персональный утренний брифинг в Telegram.
 
-GitHub Actions **раз в день** (07:17 Da Nang, UTC+7) дергает `POST /cron/digest` на Railway; сборка и отправка — на сервере:
+GitHub Actions **2 раза в день** (07:17 и 18:23 Da Nang, UTC+7) дергает `POST /cron/digest` на Railway; сборка и отправка — на сервере:
 
 - Погода в Da Nang
 - Курсы: BTC, ETH, VND/USD
-- Новости (9 тем в 3 группах, отдельный LLM-запрос на тему) — отправляются сразу вслед за брифом
+- Новости (9 тем в 3 группах, отдельный LLM-запрос на тему) — только утром, сразу вслед за брифом; вечерний прогон шлёт только бриф
 
 **Стек:** Python 3.11+, GitHub Actions, Railway (webhook + Serverless), OpenRouter (`perplexity/sonar`), Langfuse (опционально), Telegram Bot API, wttr.in, CoinGecko.
 
@@ -62,7 +62,7 @@ railway.toml
 
 | Режим | Entry point | Где запускать |
 |-------|-------------|---------------|
-| Бриф + новости по расписанию | `POST /cron/digest` | GitHub Actions → Railway |
+| Утро: бриф + новости; вечер: бриф (`?news=0`) | `POST /cron/digest` | GitHub Actions → Railway |
 | Команды `/brief`, `/news`, … | `python bot.py` | Railway (webhook) или локально (polling) |
 
 **Режим бота:** если задан `WEBHOOK_URL` или `RAILWAY_PUBLIC_DOMAIN` + `WEBHOOK_SECRET` → webhook; иначе polling.
@@ -95,7 +95,7 @@ fetch_grouped_news()
 2. Мировое (3 темы)
 3. Политика (2 темы)
 
-Cron шлёт бриф и сразу за ним новости; `/news` шлёт только новости. Пустая группа (все темы упали) — сообщение не отправляется.
+Утренний cron шлёт бриф и сразу за ним новости; вечерний — только бриф (`?news=0`). `/news` шлёт только новости. Пустая группа (все темы упали) — сообщение не отправляется.
 
 RSS (`fetchers/news.py`) и Gemini (`llm.py`) в репозитории, но **не вызываются** из `service.py`.
 
@@ -136,7 +136,7 @@ RSS (`fetchers/news.py`) и Gemini (`llm.py`) в репозитории, но **
 
 ## Workflow
 
-- **GitHub Actions:** cron 07:17 Da Nang; `workflow_dispatch`; `curl POST /cron/digest`
+- **GitHub Actions:** cron 07:17 (бриф+новости) и 18:23 (бриф) Da Nang; `workflow_dispatch`; `curl POST /cron/digest`
 - **Railway:** `python bot.py`; Serverless; `GET /health`
 - **Отладка новостей:** `python scripts/openrouter_call.py --topic ai`
 

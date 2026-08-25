@@ -40,11 +40,15 @@ class CronDigestHandler(tornado.web.RequestHandler):
             self.write("unauthorized")
             return
 
+        include_news = self.get_query_argument("news", "1") != "0"
         loop = tornado.ioloop.IOLoop.current()
         try:
             await loop.run_in_executor(
                 None,
-                lambda: deliver_scheduled_digest(source="railway-cron"),
+                lambda: deliver_scheduled_digest(
+                    source="railway-cron",
+                    include_news=include_news,
+                ),
             )
         except Exception:
             logging.exception("scheduled digest failed")

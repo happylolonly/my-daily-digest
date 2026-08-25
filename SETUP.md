@@ -95,7 +95,8 @@ Full Railway variable list: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_
 
 Workflow: [`.github/workflows/daily.yml`](.github/workflows/daily.yml)
 
-- **07:17 Da Nang** (UTC+7) — once a day
+- **07:17 Da Nang** (UTC+7) — brief + news
+- **18:23 Da Nang** (UTC+7) — brief only (`POST /cron/digest?news=0`)
 - Manual run: **Actions → Daily Digest → Run workflow**
 
 Repository secrets:
@@ -116,7 +117,7 @@ Config: [`railway.toml`](railway.toml)
 
 Webhook mode: `WEBHOOK_URL` or `RAILWAY_PUBLIC_DOMAIN` + `WEBHOOK_SECRET`.
 
-Cron endpoint: `POST /cron/digest` with `Authorization: Bearer <CRON_SECRET>`.
+Cron endpoint: `POST /cron/digest` with `Authorization: Bearer <CRON_SECRET>`. Evening cron adds `?news=0` (brief only).
 
 ## 6. Langfuse
 

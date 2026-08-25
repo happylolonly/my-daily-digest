@@ -3,8 +3,9 @@ name: Daily Digest
 on:
   schedule:
     # UTC → Da Nang (UTC+7). Non-zero minutes avoid GitHub Actions queue peak at :00.
-    # 17 0 * * * = 07:17
+    # 17 0 * * * = 07:17 (brief + news), 23 11 * * * = 18:23 (brief only)
     - cron: "17 0 * * *"
+    - cron: "23 11 * * *"
   workflow_dispatch:
 
 jobs:
@@ -20,7 +21,11 @@ jobs:
             echo "CRON_SECRET and RAILWAY_PUBLIC_DOMAIN must be set in repository secrets."
             exit 1
           fi
+          digest_url="https://${RAILWAY_PUBLIC_DOMAIN}/cron/digest"
+          if [[ "${{ github.event.schedule }}" == "23 11 * * *" ]]; then
+            digest_url="${digest_url}?news=0"
+          fi
           curl -fsS --max-time 180 \
             -X POST \
             -H "Authorization: Bearer ${CRON_SECRET}" \
-            "https://${RAILWAY_PUBLIC_DOMAIN}/cron/digest"
+            "$digest_url"
