@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 
 from digest.config import format_report_date_ru
-from digest.content.news.fetch import GroupNews, TopicFailure
+from digest.content.news.fetch import GroupNews, GroupedNewsResult, TopicFailure
 from digest.content.news.topics import NewsGroup
 from digest.content.telegram_html import ensure_html_safe
 from digest.content.weather import format_weather_body
@@ -226,3 +226,20 @@ def build_news_groups_html_list(
         )
         for group_news in grouped
     ]
+
+
+def build_openrouter_cost_html(total_cost: float) -> str:
+    return ensure_html_safe(f"💸 OpenRouter: ${total_cost:.4f}")
+
+
+def build_news_delivery_messages(
+    report_date: str,
+    result: GroupedNewsResult,
+) -> list[str]:
+    if result.unavailable_reason is not None:
+        messages = [build_news_unavailable_html(report_date, result.unavailable_reason)]
+    else:
+        messages = build_news_groups_html_list(report_date, result.groups)
+    if result.total_cost:
+        messages.append(build_openrouter_cost_html(result.total_cost))
+    return messages

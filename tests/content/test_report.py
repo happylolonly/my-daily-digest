@@ -6,15 +6,17 @@ glue (build_brief_html etc.) is left out of the safety net per the plan.
 
 from __future__ import annotations
 
-from digest.content.news.fetch import GroupNews, TopicBlock, TopicFailure
+from digest.content.news.fetch import GroupNews, GroupedNewsResult, TopicBlock, TopicFailure
 from digest.content.news.topics import NewsGroup, NewsTopic
 from digest.content.report import (
     _format_failures_footer,
     _format_news_body,
     _format_news_item_line,
     build_group_news_html,
+    build_news_delivery_messages,
     build_news_groups_html_list,
     build_news_unavailable_html,
+    build_openrouter_cost_html,
 )
 
 
@@ -129,3 +131,53 @@ def test_build_news_groups_html_list_one_message_per_group() -> None:
     assert "Технологии" in messages[0]
     assert "💡" in messages[0]
     assert '<a href="https://x.com/a">подробнее</a>' in messages[0]
+
+
+# --- OpenRouter cost footer --------------------------------------------------
+
+
+def test_build_openrouter_cost_html_formats_usd() -> None:
+    assert "OpenRouter" in build_openrouter_cost_html(0.01234)
+    assert "$0.0123" in build_openrouter_cost_html(0.01234)
+
+
+def test_build_news_delivery_messages_appends_cost_after_groups() -> None:
+    group = NewsGroup(id="tech", title="Технологии", emoji="💡", topic_ids=("ai",))
+    topic_block = TopicBlock(topic=_topic(), text="ИИ:\n1. Новость — https://x.com/a")
+    result = GroupedNewsResult(
+        groups=[GroupNews(group=group, blocks=[topic_block])],
+        total_cost=0.042,
+    )
+
+    messages = build_news_delivery_messages("2026-06-13", result)
+
+    assert len(messages) == 2
+    assert "Технологии" in messages[0]
+    assert messages[1] == build_openrouter_cost_html(0.042)
+
+
+def test_build_news_delivery_messages_skips_zero_cost() -> None:
+    group = NewsGroup(id="tech", title="Технологии", emoji="💡", topic_ids=("ai",))
+    topic_block = TopicBlock(topic=_topic(), text="ИИ:\n1. Новость — https://x.com/a")
+    result = GroupedNewsResult(
+        groups=[GroupNews(group=group, blocks=[topic_block])],
+    )
+
+    messages = build_news_delivery_messages("2026-06-13", result)
+
+    assert len(messages) == 1
+    assert "OpenRouter" not in messages[0]
+
+
+def test_build_news_delivery_messages_appends_cost_after_unavailable() -> None:
+    result = GroupedNewsResult(
+        groups=[],
+        unavailable_reason="parse",
+        total_cost=0.01,
+    )
+
+    messages = build_news_delivery_messages("2026-08-03", result)
+
+    assert len(messages) == 2
+    assert "Новости недоступны" in messages[0]
+    assert "$0.0100" in messages[1]

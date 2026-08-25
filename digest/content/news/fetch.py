@@ -50,6 +50,7 @@ class GroupedNewsResult:
 
     groups: list[GroupNews]
     unavailable_reason: str | None = None
+    total_cost: float = 0.0
 
 
 def news_model() -> str:
@@ -60,6 +61,7 @@ def _chat_extra() -> dict[str, Any]:
     return {
         "search_recency_filter": "day",
         "web_search_options": {"search_context_size": "low"},
+        "usage": {"include": True},
     }
 
 
@@ -135,14 +137,14 @@ def _fetch_topic_block(
 
 def fetch_all_topic_results(
     report_date: str,
-) -> tuple[dict[str, TopicBlock], dict[str, TopicFailure]]:
-    """Fetch all topics in parallel; returns (successes, failures) keyed by topic id."""
+) -> tuple[dict[str, TopicBlock], dict[str, TopicFailure], float]:
+    """Fetch all topics in parallel; returns (successes, failures, total USD cost)."""
     if not openrouter_api_key():
         logging.warning("OPENROUTER_API_KEY not set, news unavailable")
         failures = {
             topic.id: TopicFailure(topic=topic, reason="no key") for topic in NEWS_TOPICS
         }
-        return {}, failures
+        return {}, failures, 0.0
 
     blocks: dict[str, TopicBlock] = {}
     failures: dict[str, TopicFailure] = {}
@@ -171,12 +173,12 @@ def fetch_all_topic_results(
             len(blocks),
             len(NEWS_TOPICS),
         )
-    return blocks, failures
+    return blocks, failures, total_cost
 
 
 def fetch_all_topic_blocks(report_date: str) -> dict[str, TopicBlock]:
     """Fetch all news topics in parallel; returns successful blocks keyed by topic id."""
-    blocks, _failures = fetch_all_topic_results(report_date)
+    blocks, _failures, _cost = fetch_all_topic_results(report_date)
     return blocks
 
 
@@ -207,15 +209,20 @@ def group_topic_blocks(blocks: dict[str, TopicBlock]) -> list[GroupNews]:
 
 def fetch_grouped_news(report_date: str) -> GroupedNewsResult:
     """Fetch all topics; total failure → unavailable_reason, else groups (incl. dead)."""
-    blocks, failures = fetch_all_topic_results(report_date)
+    blocks, failures, total_cost = fetch_all_topic_results(report_date)
     if not blocks:
         reasons = [f.reason for f in failures.values()]
         reason = _pick_reason(reasons) if reasons else "error"
         logging.warning(
             "OpenRouter news: all topics failed for %s (%s)", report_date, reason
         )
-        return GroupedNewsResult(groups=[], unavailable_reason=reason)
-    return GroupedNewsResult(groups=group_topic_results(blocks, failures))
+        return GroupedNewsResult(
+            groups=[], unavailable_reason=reason, total_cost=total_cost
+        )
+    return GroupedNewsResult(
+        groups=group_topic_results(blocks, failures),
+        total_cost=total_cost,
+    )
 
 
 def _ordered_block_texts(blocks: dict[str, TopicBlock]) -> list[str]:
