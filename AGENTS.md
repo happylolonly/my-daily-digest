@@ -4,7 +4,7 @@
 
 **Daily Digest Bot** — персональный утренний брифинг в Telegram.
 
-GitHub Actions **2 раза в день** (8:00 и 18:00 Da Nang, UTC+7) дергает `POST /cron/digest` на Railway; сборка и отправка — на сервере:
+GitHub Actions **раз в день** (07:17 Da Nang, UTC+7) дергает `POST /cron/digest` на Railway; сборка и отправка — на сервере:
 
 - Погода в Da Nang
 - Курсы: BTC, ETH, VND/USD
@@ -136,7 +136,7 @@ RSS (`fetchers/news.py`) и Gemini (`llm.py`) в репозитории, но **
 
 ## Workflow
 
-- **GitHub Actions:** cron 8:00 и 18:00 Da Nang; `workflow_dispatch`; `curl POST /cron/digest`
+- **GitHub Actions:** cron 07:17 Da Nang; `workflow_dispatch`; `curl POST /cron/digest`
 - **Railway:** `python bot.py`; Serverless; `GET /health`
 - **Отладка новостей:** `python scripts/openrouter_call.py --topic ai`
 
